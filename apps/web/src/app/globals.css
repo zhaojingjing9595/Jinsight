@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  /* === CORE COLORS === */
+  --color-base:       #fcfaeb;
+  --color-primary:    #a57dee;
+  --color-income:     #2ad2a3;
+  --color-reward:     #feb704;
+  --color-alert:      #fc524f;
+  --color-goal:       #cce972;
+  --color-story:      #cdb1e7;
+  --color-fun:        #fdb6f0;
+  --color-ink:        #111008;
+
+  /* === CATEGORY COLORS === */
+  --cat-food:         #2ad2a3;
+  --cat-transport:    #f07030;
+  --cat-savings:      #cce972;
+  --cat-bills:        #cdb1e7;
+  --cat-fun:          #fdb6f0;
+  --cat-shopping:     #feb704;
+  --cat-health:       #9090cc;
+  --cat-subs:         #208870;
+  --cat-restaurants:  #f5a800;
+  --cat-travel:       #f0c000;
+  --cat-other:        #fcfaeb;
+
+  /* === TYPOGRAPHY === */
+  --font-display:     'Barlow Condensed', sans-serif;
+  --font-body:        'Space Grotesk', sans-serif;
+
+  /* === BORDERS === */
+  --border-ink:       2.5px solid #111008;
+  --border-btn:       2px solid #111008;
+  --border-badge:     1.5px solid #111008;
+
+  /* === SHADOWS === */
+  --shadow-lg:        5px 5px 0 #111008;
+  --shadow-md:        4px 4px 0 #111008;
+  --shadow-sm:        3px 3px 0 #111008;
+  --shadow-dark:      4px 4px 0 #555555;
+
+  /* === BORDER RADIUS === */
+  --radius-card:      14px;
+  --radius-btn:       8px;
+  --radius-pill:      20px;
+  --radius-icon:      8px;
+  --radius-stat:      12px;
+  --radius-nav:       16px;
+  --radius-onboard:   20px;
+
+  /* === SPACING === */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+}
+
+@theme {
+  --color-base: #fcfaeb;
+  --color-primary: #a57dee;
+  --color-income: #2ad2a3;
+  --color-reward: #feb704;
+  --color-alert: #fc524f;
+  --color-goal: #cce972;
+  --color-story: #cdb1e7;
+  --color-fun: #fdb6f0;
+  --color-ink: #111008;
+
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}

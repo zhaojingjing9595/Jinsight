@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AccountType {
+  PERSONAL
+  SHARED
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}
+
+enum Period {
+  MONTHLY
+  WEEKLY
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String?
+  currency     String        @default("ILS")
+  persona      String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  accounts     Account[]
+  budgets      Budget[]
+  goals        Goal[]
+  bills        Bill[]
+}
+
+model Account {
+  id           String          @id @default(uuid())
+  userId       String
+  name         String
+  type         AccountType     @default(PERSONAL)
+  balance      Float           @default(0)
+  createdAt    DateTime        @default(now())
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  members      AccountMember[]
+}
+
+model AccountMember {
+  id        String   @id @default(uuid())
+  accountId String
+  userId    String
+  joinedAt  DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, userId])
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  accountId   String
+  amount      Float
+  type        TxType
+  category    String
+  description String?
+  date        DateTime
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Budget {
+  id       String @id @default(uuid())
+  userId   String
+  category String
+  limit    Float
+  period   Period @default(MONTHLY)
+  month    Int
+  year     Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, month, year])
+}
+
+model Goal {
+  id           String    @id @default(uuid())
+  userId       String
+  name         String
+  targetAmount Float
+  savedAmount  Float     @default(0)
+  deadline     DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  amount      Float
+  dueDate     DateTime
+  isRecurring Boolean  @default(false)
+  isPaid      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
