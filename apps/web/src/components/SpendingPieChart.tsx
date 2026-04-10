@@ -4,15 +4,11 @@ type SliceData = {
   color: string;
 };
 
-// Chart geometry
-const CX = 230;         // centre x in viewBox
-const CY = 175;         // centre y in viewBox
+// Chart geometry — viewBox is a tight square around the donut
+const CX = 120;         // centre x in viewBox
+const CY = 120;         // centre y in viewBox
 const R = 100;          // outer radius
 const INNER_R = 63;     // donut hole radius
-const R_DOT = R + 7;    // coloured dot sits just outside the slice
-const R_ELBOW = R + 28; // connector knee — where the line bends toward the label
-const R_LINE = R + 48;  // where the line ends (small gap before text)
-const R_TEXT = R + 55;  // text anchor (just beyond line end)
 
 function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -59,19 +55,19 @@ export function SpendingPieChart({
       const start = cursor;
       const end = cursor + sweep;
       cursor += sweep;
-      return { ...s, start, end, mid: (start + end) / 2 };
+      return { ...s, start, end };
     });
 
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full flex flex-col">
       {/*
        * viewBox is wider than tall so the chart has room for labels on all
        * four sides.  preserveAspectRatio keeps it centred and undistorted.
        */}
       <svg
-        viewBox="0 0 460 350"
-        className="w-full h-full"
+        viewBox="0 0 240 240"
+        className="flex-1 min-h-0 w-full"
         preserveAspectRatio="xMidYMid meet"
         aria-label="Spending breakdown by category"
       >
@@ -99,9 +95,9 @@ export function SpendingPieChart({
         {/* ── Centre labels ── */}
         <text
           x={CX}
-          y={CY - 8}
+          y={CY - 10}
           textAnchor="middle"
-          fontSize="7"
+          fontSize="9"
           fontFamily="Space Grotesk, sans-serif"
           fontWeight="700"
           fill="#888"
@@ -111,7 +107,7 @@ export function SpendingPieChart({
         </text>
         <text
           x={CX}
-          y={CY + 9}
+          y={CY + 10}
           textAnchor="middle"
           fontSize="12"
           fontFamily="Space Grotesk, sans-serif"
@@ -121,84 +117,29 @@ export function SpendingPieChart({
           {totalLabel}
         </text>
 
-        {/* ── Callout connectors + labels ── */}
-        {arcs.map((a, i) => {
-          const labelAngle = a.mid;
-
-          // Three points that form the two-segment connector:
-          //   dot  → elbow (bends here from slice direction to label direction)
-          //   elbow → lineEnd
-          const dotPt   = polarToCartesian(CX, CY, R_DOT,   a.mid);
-          const elbowPt = polarToCartesian(CX, CY, R_ELBOW, labelAngle);
-          const linePt  = polarToCartesian(CX, CY, R_LINE,  labelAngle);
-          const textPt  = polarToCartesian(CX, CY, R_TEXT,  labelAngle);
-
-          // Text anchor and vertical offset derived from where on the circle
-          // the label lands.
-          const labelRad = ((labelAngle - 90) * Math.PI) / 180;
-          const cosL = Math.cos(labelRad); // > 0 → right side
-          const sinL = Math.sin(labelRad); // < 0 → top area
-
-          const textAnchor =
-            Math.abs(cosL) < 0.3 ? "middle" : cosL > 0 ? "start" : "end";
-
-          // For labels near the top, draw text above the anchor point;
-          // everywhere else, draw it below / beside.
-          const textY1 = sinL < -0.3 ? textPt.y - 5 : textPt.y + 2;
-          const textY2 = textY1 + 11;
-
-          return (
-            <g key={`callout-${i}`}>
-              {/* Two-segment elbow connector */}
-              <polyline
-                points={[
-                  `${dotPt.x.toFixed(1)},${dotPt.y.toFixed(1)}`,
-                  `${elbowPt.x.toFixed(1)},${elbowPt.y.toFixed(1)}`,
-                  `${linePt.x.toFixed(1)},${linePt.y.toFixed(1)}`,
-                ].join(" ")}
-                fill="none"
-                stroke="#bbb"
-                strokeWidth="1"
-                strokeDasharray="3 2"
-                strokeLinejoin="round"
-              />
-              {/* Coloured dot on the slice edge */}
-              <circle
-                cx={dotPt.x.toFixed(1)}
-                cy={dotPt.y.toFixed(1)}
-                r="2.5"
-                fill={a.color}
-                stroke="#111008"
-                strokeWidth="1"
-              />
-              {/* Category name */}
-              <text
-                x={textPt.x.toFixed(1)}
-                y={textY1.toFixed(1)}
-                textAnchor={textAnchor}
-                fontSize="7.5"
-                fontFamily="Space Grotesk, sans-serif"
-                fontWeight="700"
-                fill="#111008"
-              >
-                {a.label}
-              </text>
-              {/* Amount */}
-              <text
-                x={textPt.x.toFixed(1)}
-                y={textY2.toFixed(1)}
-                textAnchor={textAnchor}
-                fontSize="7"
-                fontFamily="Space Grotesk, sans-serif"
-                fontWeight="400"
-                fill="#666"
-              >
-                ₪{a.amount.toLocaleString()}
-              </text>
-            </g>
-          );
-        })}
       </svg>
+
+      {/* ── Bottom legend ── */}
+      <div className="flex-none flex flex-wrap justify-center gap-x-3 gap-y-1 pb-1">
+        {arcs.map((a, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-sm border border-[#111008] flex-shrink-0"
+              style={{ backgroundColor: a.color }}
+            />
+            <span
+              style={{
+                fontFamily: "Space Grotesk, sans-serif",
+                fontSize: "10px",
+                fontWeight: 600,
+                color: "#111008",
+              }}
+            >
+              {a.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

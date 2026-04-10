@@ -153,7 +153,7 @@ export default function DashboardPage() {
       {/* ── Section 1: Balance hero (~26 % of viewport) ── */}
       <div
         className="min-h-0 flex flex-col pt-8 pb-3"
-        style={{ flex: "0 0 26dvh" }}
+        style={{ flex: "0 0 18dvh" }}
       >
         <div
           className="flex-1 border-[2.5px] border-[#111008] rounded-[18px] shadow-[5px_5px_0_#111008] px-5 flex flex-col items-center justify-center text-center"
@@ -187,7 +187,7 @@ export default function DashboardPage() {
       {/* ── Section 2: Income vs Spent — single bar (~20 % of viewport) ── */}
       <div
         className="min-h-0 flex flex-col pb-3"
-        style={{ flex: "0 0 20dvh" }}
+        style={{ flex: "0 0 15dvh" }}
       >
         <div
           className="flex-1 border-[2.5px] border-[#111008] rounded-[14px] shadow-[4px_4px_0_#111008] px-4 flex flex-col justify-center gap-2"
