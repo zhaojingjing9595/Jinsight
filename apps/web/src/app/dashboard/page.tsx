@@ -1,9 +1,12 @@
 import { formatCurrency, CATEGORY_META } from "@jinsight/core";
-import type { Transaction, Category } from "@jinsight/core";
+import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
-import { SpendingPieChart } from "@/components/SpendingPieChart";
+import { ChartSection } from "@/components/ChartSection";
+import { TransactionHistory } from "@/components/TransactionHistory";
+import type { MonthData } from "@/components/MonthlyBarChart";
 
-// Mock data — will be replaced with real data in Phase 2
+// ─── Mock data (Phase 1 — replaced with real data in Phase 2) ────────────────
+
 const MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: "1",
@@ -12,7 +15,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: "INCOME",
     category: "income",
     description: "Monthly salary",
-    date: new Date("2026-04-01"),
+    date: new Date("2026-04-01T09:00:00"),
     isRecurring: true,
     createdAt: new Date("2026-04-01"),
   },
@@ -21,66 +24,66 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     accountId: "acc1",
     amount: 2200,
     type: "EXPENSE",
-    category: "bills",
+    category: "rent",
     description: "April rent",
-    date: new Date("2026-04-01"),
+    date: new Date("2026-04-01T10:30:00"),
     isRecurring: true,
     createdAt: new Date("2026-04-01"),
   },
   {
     id: "3",
     accountId: "acc1",
-    amount: 320,
-    type: "EXPENSE",
-    category: "food",
-    description: "Weekly groceries",
-    date: new Date("2026-04-06"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-06"),
-  },
-  {
-    id: "4",
-    accountId: "acc1",
-    amount: 180,
-    type: "EXPENSE",
-    category: "restaurants",
-    description: "Dinner at Oasis",
-    date: new Date("2026-04-05"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-05"),
-  },
-  {
-    id: "5",
-    accountId: "acc1",
     amount: 150,
     type: "EXPENSE",
-    category: "other",
+    category: "utilities",
     description: "Electricity & Internet",
-    date: new Date("2026-04-03"),
+    date: new Date("2026-04-03T08:00:00"),
     isRecurring: true,
     createdAt: new Date("2026-04-03"),
   },
   {
-    id: "6",
-    accountId: "acc1",
-    amount: 45,
-    type: "EXPENSE",
-    category: "health",
-    description: "Monthly gym membership",
-    date: new Date("2026-04-02"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-02"),
-  },
-  {
-    id: "7",
+    id: "4",
     accountId: "acc1",
     amount: 49,
     type: "EXPENSE",
     category: "subscriptions",
     description: "Spotify + Netflix",
-    date: new Date("2026-04-04"),
+    date: new Date("2026-04-04T12:00:00"),
     isRecurring: true,
     createdAt: new Date("2026-04-04"),
+  },
+  {
+    id: "5",
+    accountId: "acc1",
+    amount: 320,
+    type: "EXPENSE",
+    category: "grocery",
+    description: "Weekly groceries",
+    date: new Date("2026-04-06T17:30:00"),
+    isRecurring: false,
+    createdAt: new Date("2026-04-06"),
+  },
+  {
+    id: "6",
+    accountId: "acc1",
+    amount: 180,
+    type: "EXPENSE",
+    category: "dining",
+    description: "Dinner at Oasis",
+    date: new Date("2026-04-05T19:45:00"),
+    isRecurring: false,
+    createdAt: new Date("2026-04-05"),
+  },
+  {
+    id: "7",
+    accountId: "acc1",
+    amount: 150,
+    type: "EXPENSE",
+    category: "shopping",
+    description: "New sneakers",
+    date: new Date("2026-04-07T14:30:00"),
+    isRecurring: false,
+    createdAt: new Date("2026-04-07"),
   },
   {
     id: "8",
@@ -89,30 +92,34 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: "EXPENSE",
     category: "transport",
     description: "Monthly transit pass",
-    date: new Date("2026-04-03"),
+    date: new Date("2026-04-03T09:00:00"),
     isRecurring: true,
     createdAt: new Date("2026-04-03"),
   },
   {
     id: "9",
     accountId: "acc1",
-    amount: 150,
+    amount: 45,
     type: "EXPENSE",
-    category: "shopping",
-    description: "New sneakers",
-    date: new Date("2026-04-07"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-07"),
+    category: "other",
+    description: "Monthly gym membership",
+    date: new Date("2026-04-02T07:00:00"),
+    isRecurring: true,
+    createdAt: new Date("2026-04-02"),
   },
 ];
 
-const CATEGORY_LABEL_OVERRIDES: Partial<Record<Category, string>> = {
-  bills: "Rent & Bills",
-  food: "Grocery",
-  restaurants: "Food",
-  health: "Gym",
-  other: "Other",
-};
+// Last 6 months of income vs. spending (Nov 2025 – Apr 2026)
+const MONTHLY_DATA: MonthData[] = [
+  { month: "Nov", income: 8200, spent: 7800 },
+  { month: "Dec", income: 8200, spent: 9200 },
+  { month: "Jan", income: 8500, spent: 6500 },
+  { month: "Feb", income: 8500, spent: 7100 },
+  { month: "Mar", income: 8500, spent: 8600 },
+  { month: "Apr", income: 8500, spent: 3159 },
+];
+
+// ─── Derived values ───────────────────────────────────────────────────────────
 
 const totalIncome = MOCK_TRANSACTIONS.filter((t) => t.type === "INCOME").reduce(
   (sum, t) => sum + t.amount,
@@ -125,14 +132,12 @@ const totalExpenses = MOCK_TRANSACTIONS.filter((t) => t.type === "EXPENSE").redu
 const balance = totalIncome - totalExpenses;
 const spentRatio = Math.min((totalExpenses / totalIncome) * 100, 100);
 
-// Aggregate expenses by category for the pie chart
 const categoryTotals = MOCK_TRANSACTIONS.filter((t) => t.type === "EXPENSE").reduce<
   Record<string, { amount: number; color: string; label: string }>
 >((acc, t) => {
   const meta = CATEGORY_META[t.category];
-  const label = CATEGORY_LABEL_OVERRIDES[t.category] ?? meta.label;
   if (!acc[t.category]) {
-    acc[t.category] = { amount: 0, color: meta.color, label };
+    acc[t.category] = { amount: 0, color: meta.color, label: meta.label };
   }
   acc[t.category].amount += t.amount;
   return acc;
@@ -140,93 +145,61 @@ const categoryTotals = MOCK_TRANSACTIONS.filter((t) => t.type === "EXPENSE").red
 
 const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount);
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   return (
-    /*
-     * Outer shell: exactly one viewport tall, flex column.
-     * overflow-hidden prevents any child from causing a scrollbar.
-     */
     <div
-      className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4"
-      style={{ height: "100dvh", backgroundColor: "#fcfaeb" }}
+      className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base"
+      style={{ height: "100dvh" }}
     >
-      {/* ── Section 1: Balance hero (~26 % of viewport) ── */}
+      {/* ── Section 1: Balance hero (~18 dvh) ── */}
       <div
         className="min-h-0 flex flex-col pt-8 pb-3"
         style={{ flex: "0 0 18dvh" }}
       >
-        <div
-          className="flex-1 border-[2.5px] border-[#111008] rounded-[18px] shadow-[5px_5px_0_#111008] px-5 flex flex-col items-center justify-center text-center"
-          style={{ backgroundColor: "#feb704" }}
-        >
-          <p
-            className="text-[9px] font-[700] uppercase tracking-[2.5px] mb-1"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#6b4800" }}
-          >
+        <div className="flex-1 border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 flex flex-col items-center justify-center text-center bg-reward">
+          <p className="text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
             April 2026 · Current Balance
           </p>
           <h1
-            className="font-[500] leading-[1.0] text-[#111008]"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: "clamp(34px, 5.5dvh, 56px)",
-              letterSpacing: "0.01em",
-            }}
+            className="font-medium leading-none text-ink"
+            style={{ fontSize: "clamp(34px, 5.5dvh, 56px)", letterSpacing: "0.01em" }}
           >
             {formatCurrency(balance, "ILS")}
           </h1>
-          <p
-            className="text-[10px] font-[500] mt-1"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#6b4800" }}
-          >
+          <p className="text-[10px] font-medium mt-1 text-reward-dark">
             Income minus spending this month
           </p>
         </div>
       </div>
 
-      {/* ── Section 2: Income vs Spent — single bar (~20 % of viewport) ── */}
+      {/* ── Section 2: Income vs Spent bar (~15 dvh) ── */}
       <div
         className="min-h-0 flex flex-col pb-3"
         style={{ flex: "0 0 15dvh" }}
       >
-        <div
-          className="flex-1 border-[2.5px] border-[#111008] rounded-[14px] shadow-[4px_4px_0_#111008] px-4 flex flex-col justify-center gap-2"
-          style={{ backgroundColor: "#fcfaeb" }}
-        >
+        <div className="flex-1 border-[2.5px] border-ink rounded-card shadow-neo-md px-4 flex flex-col justify-center gap-2 bg-base">
           {/* Amount labels */}
           <div className="flex justify-between items-end">
             <div>
-              <p
-                className="text-[9px] font-[700] uppercase tracking-[1.5px]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#fc524f" }}
-              >
+              <p className="text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
                 Spent
               </p>
               <p
-                className="font-[500] leading-none text-[#111008]"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: "clamp(16px, 2.5dvh, 22px)",
-                  letterSpacing: "0.01em",
-                }}
+                className="font-medium leading-none text-ink"
+                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)", letterSpacing: "0.01em" }}
               >
                 {formatCurrency(totalExpenses, "ILS")}
               </p>
             </div>
             <div className="text-right">
-              <p
-                className="text-[9px] font-[700] uppercase tracking-[1.5px]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#2ad2a3" }}
-              >
+              <p className="text-[9px] font-bold uppercase tracking-[1.5px] text-income">
                 Income
               </p>
               <p
-                className="font-[500] leading-none text-[#111008]"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: "clamp(16px, 2.5dvh, 22px)",
-                  letterSpacing: "0.01em",
-                }}
+                className="font-medium leading-none text-ink"
+                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)", letterSpacing: "0.01em" }}
               >
                 {formatCurrency(totalIncome, "ILS")}
               </p>
@@ -235,28 +208,18 @@ export default function DashboardPage() {
 
           {/* Single combined bar */}
           <div>
-            <div
-              className="h-[20px] rounded-[30px] border-[2px] border-[#111008] overflow-hidden relative"
-              style={{ backgroundColor: "#2ad2a3" }}
-            >
+            <div className="h-[20px] rounded-[30px] border-[2px] border-ink overflow-hidden relative bg-income">
               <div
-                className="absolute left-0 top-0 h-full"
-                style={{
-                  width: `${spentRatio}%`,
-                  backgroundColor: "#fc524f",
-                  borderRadius: "28px 0 0 28px",
-                }}
+                className="absolute left-0 top-0 h-full bg-alert"
+                style={{ width: `${spentRatio}%`, borderRadius: "28px 0 0 28px" }}
               />
               <div
-                className="absolute top-0 bottom-0 w-[2px] bg-[#111008]"
+                className="absolute top-0 bottom-0 w-[2px] bg-ink"
                 style={{ left: `${spentRatio}%` }}
               />
             </div>
             <div className="flex justify-end mt-1">
-              <span
-                className="text-[9px] font-[600]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#086b52" }}
-              >
+              <span className="text-[9px] font-semibold text-income-dark">
                 {formatCurrency(totalIncome - totalExpenses, "ILS")} left
               </span>
             </div>
@@ -264,29 +227,30 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 3: Spending breakdown pie (fills the rest) ── */}
+      {/* ── Section 3: Charts + transaction history (scrollable) ── */}
       <div
-        className="flex-1 min-h-0 flex flex-col"
-        style={{ paddingBottom: "calc(80px + 20px)" }}
+        className="flex-1 min-h-0 overflow-y-auto"
+        style={{ paddingBottom: "calc(80px + 16px)" }}
       >
+        {/* Chart card */}
         <div
-          className="flex-1 min-h-0 border-[2.5px] border-[#111008] rounded-[14px] shadow-[4px_4px_0_#111008] px-4 pt-3 pb-2 flex flex-col overflow-hidden"
-          style={{ backgroundColor: "#fcfaeb" }}
+          className="border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
+          style={{ height: "clamp(220px, 38dvh, 320px)" }}
         >
-          <h2
-            className="flex-none text-[12px] font-[900] text-[#111008] mb-1 uppercase tracking-[1.5px]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <h2 className="flex-none text-[12px] font-black uppercase tracking-[1.5px] text-ink mb-1">
             Where It Went
           </h2>
-          {/* Pie fills whatever height remains in the card */}
           <div className="flex-1 min-h-0">
-            <SpendingPieChart
+            <ChartSection
               slices={pieSlices}
               totalLabel={formatCurrency(totalExpenses, "ILS")}
+              monthlyData={MONTHLY_DATA}
             />
           </div>
         </div>
+
+        {/* Transaction history list */}
+        <TransactionHistory transactions={MOCK_TRANSACTIONS} />
       </div>
 
       <BottomNav active="home" />

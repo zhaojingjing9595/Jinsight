@@ -2,52 +2,56 @@
 
 :root {
   /* === CORE COLORS === */
-  --color-base:       #fcfaeb;
-  --color-primary:    #a57dee;
-  --color-income:     #2ad2a3;
-  --color-reward:     #feb704;
-  --color-alert:      #fc524f;
-  --color-goal:       #cce972;
-  --color-story:      #cdb1e7;
-  --color-fun:        #fdb6f0;
-  --color-ink:        #111008;
+  --color-base:         #fcfaeb;
+  --color-primary:      #a57dee;
+  --color-income:       #2ad2a3;
+  --color-income-dark:  #086b52;
+  --color-reward:       #feb704;
+  --color-reward-dark:  #6b4800;
+  --color-alert:        #fc524f;
+  --color-goal:         #cce972;
+  --color-story:        #cdb1e7;
+  --color-fun:          #fdb6f0;
+  --color-ink:          #111008;
+  --color-muted:        #888888;
 
   /* === CATEGORY COLORS === */
-  --cat-food:         #2ad2a3;
-  --cat-transport:    #f07030;
-  --cat-savings:      #cce972;
-  --cat-bills:        #cdb1e7;
-  --cat-fun:          #fdb6f0;
-  --cat-shopping:     #feb704;
-  --cat-health:       #9090cc;
-  --cat-subs:         #208870;
-  --cat-restaurants:  #f5a800;
-  --cat-travel:       #f0c000;
-  --cat-other:        #fcfaeb;
+  --cat-rent:           #cdb1e7;
+  --cat-utilities:      #f07030;
+  --cat-subscriptions:  #208870;
+  --cat-grocery:        #2ad2a3;
+  --cat-dining:         #f5a800;
+  --cat-shopping:       #feb704;
+  --cat-entertainment:  #fdb6f0;
+  --cat-transport:      #9090cc;
+  --cat-education:      #cce972;
+  --cat-travel:         #f0c000;
+  --cat-other:          #d4d4d4;
+  --cat-income:         #2ad2a3;
 
   /* === TYPOGRAPHY === */
-  --font-display:     'Barlow Condensed', sans-serif;
-  --font-body:        'Space Grotesk', sans-serif;
+  --font-display:       'Barlow Condensed', sans-serif;
+  --font-body:          'Space Grotesk', sans-serif;
 
   /* === BORDERS === */
-  --border-ink:       2.5px solid #111008;
-  --border-btn:       2px solid #111008;
-  --border-badge:     1.5px solid #111008;
+  --border-ink:         2.5px solid #111008;
+  --border-btn:         2px solid #111008;
+  --border-badge:       1.5px solid #111008;
 
   /* === SHADOWS === */
-  --shadow-lg:        5px 5px 0 #111008;
-  --shadow-md:        4px 4px 0 #111008;
-  --shadow-sm:        3px 3px 0 #111008;
-  --shadow-dark:      4px 4px 0 #555555;
+  --shadow-neo-lg:      5px 5px 0 #111008;
+  --shadow-neo-md:      4px 4px 0 #111008;
+  --shadow-neo-sm:      3px 3px 0 #111008;
+  --shadow-neo-dark:    4px 4px 0 #555555;
 
   /* === BORDER RADIUS === */
-  --radius-card:      14px;
-  --radius-btn:       8px;
-  --radius-pill:      20px;
-  --radius-icon:      8px;
-  --radius-stat:      12px;
-  --radius-nav:       16px;
-  --radius-onboard:   20px;
+  --radius-card:        14px;
+  --radius-btn:         8px;
+  --radius-pill:        20px;
+  --radius-icon:        8px;
+  --radius-stat:        12px;
+  --radius-nav:         16px;
+  --radius-onboard:     20px;
 
   /* === SPACING === */
   --space-xs:  4px;
@@ -60,18 +64,52 @@
 }
 
 @theme {
-  --color-base: #fcfaeb;
-  --color-primary: #a57dee;
-  --color-income: #2ad2a3;
-  --color-reward: #feb704;
-  --color-alert: #fc524f;
-  --color-goal: #cce972;
-  --color-story: #cdb1e7;
-  --color-fun: #fdb6f0;
-  --color-ink: #111008;
+  /* Core colors — exposed as bg-*, text-*, border-* Tailwind utilities */
+  --color-base:         #fcfaeb;
+  --color-primary:      #a57dee;
+  --color-income:       #2ad2a3;
+  --color-income-dark:  #086b52;
+  --color-reward:       #feb704;
+  --color-reward-dark:  #6b4800;
+  --color-alert:        #fc524f;
+  --color-goal:         #cce972;
+  --color-story:        #cdb1e7;
+  --color-fun:          #fdb6f0;
+  --color-ink:          #111008;
+  --color-muted:        #888888;
 
+  /* Category colors — bg-cat-*, text-cat-* */
+  --color-cat-rent:          #cdb1e7;
+  --color-cat-utilities:     #f07030;
+  --color-cat-subscriptions: #208870;
+  --color-cat-grocery:       #2ad2a3;
+  --color-cat-dining:        #f5a800;
+  --color-cat-shopping:      #feb704;
+  --color-cat-entertainment: #fdb6f0;
+  --color-cat-transport:     #9090cc;
+  --color-cat-education:     #cce972;
+  --color-cat-travel:        #f0c000;
+  --color-cat-other:         #d4d4d4;
+  --color-cat-income:        #2ad2a3;
+
+  /* Fonts — font-display, font-body */
   --font-display: 'Barlow Condensed', sans-serif;
-  --font-body: 'Space Grotesk', sans-serif;
+  --font-body:    'Space Grotesk', sans-serif;
+
+  /* Shadows — shadow-neo-lg, shadow-neo-md, shadow-neo-sm */
+  --shadow-neo-lg:   5px 5px 0 #111008;
+  --shadow-neo-md:   4px 4px 0 #111008;
+  --shadow-neo-sm:   3px 3px 0 #111008;
+  --shadow-neo-dark: 4px 4px 0 #555555;
+
+  /* Border radii — rounded-card, rounded-btn, etc. */
+  --radius-card:    14px;
+  --radius-btn:     8px;
+  --radius-pill:    20px;
+  --radius-icon:    8px;
+  --radius-stat:    12px;
+  --radius-nav:     16px;
+  --radius-onboard: 20px;
 }
 
 * {

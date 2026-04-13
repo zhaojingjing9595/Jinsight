@@ -7,18 +7,18 @@ type BottomNavProps = {
 };
 
 const NAV_ITEMS: { id: NavItem; label: string; href: string; icon: string }[] = [
-  { id: "home", label: "HOME", href: "/dashboard", icon: "▦" },
-  { id: "map", label: "MAP", href: "/map", icon: "◎" },
-  { id: "add", label: "ADD", href: "/add", icon: "+" },
-  { id: "story", label: "STORY", href: "/story", icon: "≈" },
-  { id: "profile", label: "ME", href: "/profile", icon: "◉" },
+  { id: "home",    label: "HOME",  href: "/dashboard", icon: "▦" },
+  { id: "map",     label: "MAP",   href: "/map",       icon: "◎" },
+  { id: "add",     label: "ADD",   href: "/add",       icon: "+" },
+  { id: "story",   label: "STORY", href: "/story",     icon: "≈" },
+  { id: "profile", label: "ME",    href: "/profile",   icon: "◉" },
 ];
 
 export function BottomNav({ active }: BottomNavProps) {
   return (
     <nav
-      className="fixed bottom-4 left-4 right-4 flex items-center justify-around px-3 py-2.5 border-[2.5px] border-[#111008] rounded-[16px] shadow-[4px_4px_0_#111008] z-50"
-      style={{ backgroundColor: "#fcfaeb" }}
+      className="fixed bottom-4 left-4 right-4 flex items-center justify-around px-4 py-2 border-[2.5px] border-[#111008] shadow-[4px_4px_0_#111008] z-50"
+      style={{ backgroundColor: "#fcfaeb", borderRadius: "999px" }}
     >
       {NAV_ITEMS.map((item) => {
         const isActive = active === item.id;
@@ -28,12 +28,15 @@ export function BottomNav({ active }: BottomNavProps) {
           <Link
             key={item.id}
             href={item.href}
-            className="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center"
+            className="flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center"
           >
-            {/* Icon box */}
+            {/* Circular icon */}
             <div
-              className="w-[34px] h-[34px] flex items-center justify-center rounded-[9px] border-2 border-[#111008] text-[14px] font-bold"
+              className="flex items-center justify-center rounded-full border-[2px] border-[#111008] font-bold transition-transform active:scale-95"
               style={{
+                width: isAdd ? "42px" : "34px",
+                height: isAdd ? "42px" : "34px",
+                fontSize: isAdd ? "20px" : "14px",
                 backgroundColor: isAdd
                   ? "#2ad2a3"
                   : isActive
@@ -41,27 +44,24 @@ export function BottomNav({ active }: BottomNavProps) {
                     : "#ffffff",
                 color: isActive || isAdd ? "#ffffff" : "#111008",
                 fontFamily: "'Space Grotesk', sans-serif",
+                boxShadow: isAdd ? "2px 2px 0 #111008" : "none",
+                marginTop: isAdd ? "-6px" : "0",
               }}
             >
               {item.icon}
             </div>
             {/* Label */}
-            <span
-              className="text-[9px] font-[700] uppercase"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                letterSpacing: "1px",
-                color: isActive ? "#111008" : "#888",
-              }}
-            >
-              {item.label}
-            </span>
-            {/* Active dot */}
-            {isActive && (
+            {!isAdd && (
               <span
-                className="absolute -bottom-0 w-[6px] h-[6px] rounded-full border-[1.5px] border-[#111008]"
-                style={{ backgroundColor: "#a57dee" }}
-              />
+                className="text-[9px] font-[700] uppercase"
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  letterSpacing: "1px",
+                  color: isActive ? "#111008" : "#888",
+                }}
+              >
+                {item.label}
+              </span>
             )}
           </Link>
         );

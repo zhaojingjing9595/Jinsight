@@ -1,4 +1,4 @@
-type SliceData = {
+export type SliceData = {
   label: string;
   amount: number;
   color: string;

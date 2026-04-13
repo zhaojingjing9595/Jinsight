@@ -1,18 +1,20 @@
 export type TransactionType = "INCOME" | "EXPENSE";
 
+// Ordered: Rent, Utility Bills, Subscriptions, Grocery, Dining Out,
+//          Shopping, Entertainment, Transportation, Education, Travel, Others
 export type Category =
-  | "food"
-  | "transport"
-  | "savings"
-  | "bills"
-  | "fun"
-  | "shopping"
-  | "health"
+  | "rent"
+  | "utilities"
   | "subscriptions"
-  | "restaurants"
+  | "grocery"
+  | "dining"
+  | "shopping"
+  | "entertainment"
+  | "transport"
+  | "education"
   | "travel"
-  | "income"
-  | "other";
+  | "other"
+  | "income";
 
 export type Transaction = {
   id: string;

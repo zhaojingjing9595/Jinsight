@@ -6,19 +6,34 @@ export type CategoryMeta = {
   icon: string;
 };
 
+/** Canonical display order for spending categories (income excluded). */
+export const CATEGORY_ORDER: Category[] = [
+  "rent",
+  "utilities",
+  "subscriptions",
+  "grocery",
+  "dining",
+  "shopping",
+  "entertainment",
+  "transport",
+  "education",
+  "travel",
+  "other",
+];
+
 export const CATEGORY_META: Record<Category, CategoryMeta> = {
-  food: { label: "Food & Drink", color: "#2ad2a3", icon: "🥗" },
-  transport: { label: "Transport", color: "#f07030", icon: "🚌" },
-  savings: { label: "Savings", color: "#cce972", icon: "💰" },
-  bills: { label: "Bills", color: "#cdb1e7", icon: "📋" },
-  fun: { label: "Fun & Leisure", color: "#fdb6f0", icon: "🎉" },
-  shopping: { label: "Shopping", color: "#feb704", icon: "🛍️" },
-  health: { label: "Health", color: "#9090cc", icon: "🏥" },
-  subscriptions: { label: "Subscriptions", color: "#208870", icon: "📱" },
-  restaurants: { label: "Restaurants", color: "#f5a800", icon: "🍽️" },
-  travel: { label: "Travel", color: "#f0c000", icon: "✈️" },
-  income: { label: "Income", color: "#2ad2a3", icon: "💵" },
-  other: { label: "Other", color: "#fcfaeb", icon: "📦" },
+  rent:          { label: "Rent",           color: "#cdb1e7", icon: "🏠" },
+  utilities:     { label: "Utility Bills",  color: "#f07030", icon: "⚡" },
+  subscriptions: { label: "Subscriptions",  color: "#208870", icon: "📱" },
+  grocery:       { label: "Grocery",        color: "#2ad2a3", icon: "🛒" },
+  dining:        { label: "Dining Out",     color: "#f5a800", icon: "🍽️" },
+  shopping:      { label: "Shopping",       color: "#feb704", icon: "🛍️" },
+  entertainment: { label: "Entertainment",  color: "#fdb6f0", icon: "🎉" },
+  transport:     { label: "Transportation", color: "#9090cc", icon: "🚌" },
+  education:     { label: "Education",      color: "#cce972", icon: "📚" },
+  travel:        { label: "Travel",         color: "#f0c000", icon: "✈️" },
+  other:         { label: "Others",         color: "#d4d4d4", icon: "📦" },
+  income:        { label: "Income",         color: "#2ad2a3", icon: "💵" },
 };
 
 export const CATEGORY_LIST: Category[] = Object.keys(CATEGORY_META) as Category[];
