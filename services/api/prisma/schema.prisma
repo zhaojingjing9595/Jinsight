@@ -23,8 +23,27 @@ enum Period {
   WEEKLY
 }
 
+enum BudgetPlanType {
+  TRIP
+  EDUCATION
+  MOVING
+  EVENT
+  CUSTOM
+}
+
+enum BudgetPlanStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum BudgetPlanRole {
+  OWNER
+  MEMBER
+}
+
 model User {
-  id           String        @id @default(uuid())
+  id           String        @id
   email        String        @unique
   name         String?
   currency     String        @default("ILS")
@@ -32,7 +51,6 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   accounts     Account[]
-  budgets      Budget[]
   goals        Goal[]
   bills        Bill[]
 }
@@ -47,6 +65,7 @@ model Account {
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   members      AccountMember[]
+  budgets      Budget[]
 }
 
 model AccountMember {
@@ -67,22 +86,74 @@ model Transaction {
   category    String
   description String?
   date        DateTime
-  isRecurring Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  isRecurring  Boolean     @default(false)
+  budgetPlanId String?
+  createdAt    DateTime    @default(now())
+  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  budgetPlan   BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
+  id         String           @id @default(uuid())
+  accountId  String
+  period     Period           @default(MONTHLY)
+  month      Int
+  year       Int
+  totalLimit Float?
+  rollover   Boolean          @default(false)
+  createdBy  String
+  createdAt  DateTime         @default(now())
+  account    Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categories BudgetCategory[]
+
+  @@unique([accountId, month, year])
+}
+
+model BudgetCategory {
   id       String @id @default(uuid())
-  userId   String
+  budgetId String
   category String
   limit    Float
-  period   Period @default(MONTHLY)
-  month    Int
-  year     Int
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, category, month, year])
+  @@unique([budgetId, category])
+}
+
+model BudgetPlan {
+  id         String              @id @default(uuid())
+  name       String
+  type       BudgetPlanType
+  startDate  DateTime
+  endDate    DateTime?
+  totalLimit Float
+  status     BudgetPlanStatus    @default(PLANNED)
+  notes      String?
+  createdBy  String
+  createdAt  DateTime            @default(now())
+  members    BudgetPlanMember[]
+  categories BudgetPlanCategory[]
+  transactions Transaction[]
+}
+
+model BudgetPlanMember {
+  id       String         @id @default(uuid())
+  planId   String
+  userId   String
+  role     BudgetPlanRole @default(MEMBER)
+  joinedAt DateTime       @default(now())
+  plan     BudgetPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, userId])
+}
+
+model BudgetPlanCategory {
+  id       String     @id @default(uuid())
+  planId   String
+  category String
+  limit    Float
+  plan     BudgetPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, category])
 }
 
 model Goal {

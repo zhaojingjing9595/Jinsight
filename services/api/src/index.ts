@@ -3,6 +3,8 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./routers/index";
 import type { Context } from "./lib/trpc";
+import { prisma } from "./lib/prisma";
+import { supabaseAdmin } from "./lib/supabase";
 
 const server = Fastify({ logger: true });
 
@@ -17,10 +19,21 @@ await server.register(fastifyTRPCPlugin, {
   prefix: "/trpc",
   trpcOptions: {
     router: appRouter,
-    createContext: (): Context => ({
-      // TODO: extract userId from Supabase JWT
-      userId: null,
-    }),
+    createContext: async ({ req }): Promise<Context> => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith("Bearer ")) {
+        return { userId: null, prisma };
+      }
+
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return { userId: null, prisma };
+      }
+
+      return { userId: user.id, prisma };
+    },
   },
 });
 

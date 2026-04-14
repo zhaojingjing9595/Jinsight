@@ -1,43 +1,32 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../lib/trpc";
 
-export const transactionsRouter = router({
+export const billsRouter = router({
   list: protectedProcedure
     .input(
       z.object({
-        accountId: z.string(),
-        month: z.number().int().min(1).max(12).optional(),
-        year: z.number().int().optional(),
-        category: z.string().optional(),
-        type: z.enum(["INCOME", "EXPENSE"]).optional(),
-        budgetPlanId: z.string().optional(),
-        limit: z.number().int().min(1).max(100).default(50),
-        offset: z.number().int().min(0).default(0),
+        isPaid: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
       // TODO: implement with Prisma
-      return { transactions: [], input };
+      return { bills: [], input };
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       // TODO: implement with Prisma
-      return { transaction: null, id: input.id };
+      return { bill: null, id: input.id };
     }),
 
   create: protectedProcedure
     .input(
       z.object({
-        accountId: z.string(),
+        name: z.string().min(1),
         amount: z.number().positive(),
-        type: z.enum(["INCOME", "EXPENSE"]),
-        category: z.string(),
-        description: z.string().optional(),
-        date: z.string().datetime(),
+        dueDate: z.string().datetime(),
         isRecurring: z.boolean().default(false),
-        budgetPlanId: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -49,13 +38,11 @@ export const transactionsRouter = router({
     .input(
       z.object({
         id: z.string(),
+        name: z.string().min(1).optional(),
         amount: z.number().positive().optional(),
-        type: z.enum(["INCOME", "EXPENSE"]).optional(),
-        category: z.string().optional(),
-        description: z.string().optional(),
-        date: z.string().datetime().optional(),
+        dueDate: z.string().datetime().optional(),
         isRecurring: z.boolean().optional(),
-        budgetPlanId: z.string().nullable().optional(),
+        isPaid: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input }) => {
