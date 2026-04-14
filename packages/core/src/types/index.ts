@@ -4,6 +4,8 @@ export type {
   TransactionInput,
   TransactionType,
   Category,
+  ExpenseCategory,
+  IncomeCategory,
 } from "./transaction";
 export type { Budget, BudgetWithSpend, BudgetPeriod } from "./budget";
 export type { Goal, GoalWithProgress } from "./goal";

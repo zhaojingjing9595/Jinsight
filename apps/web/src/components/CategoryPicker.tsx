@@ -1,11 +1,12 @@
 "use client";
 
-import { CATEGORY_META, CATEGORY_ORDER } from "@jinsight/core";
+import { CATEGORY_META, EXPENSE_CATEGORY_ORDER, INCOME_CATEGORY_ORDER } from "@jinsight/core";
 import type { Category } from "@jinsight/core";
 
 // ─── SVG icon paths per category (24×24 viewBox, stroke-only) ─────────────────
 
 const ICON_PATHS: Record<Category, string[]> = {
+  // ── Expense ──
   rent: [
     "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z",
     "M9 22V12h6v10",
@@ -60,9 +61,41 @@ const ICON_PATHS: Record<Category, string[]> = {
     "M3.27 6.96L12 12.01l8.73-5.05",
     "M12 22.08V12",
   ],
-  income: [
+
+  // ── Income ──
+  salary: [
     "M12 1v22",
     "M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6",
+  ],
+  bonus: [
+    "M20 12l-8-8-8 8",
+    "M4 12l8 8 8-8",
+  ],
+  freelance: [
+    "M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34",
+    "M18 2l4 4-10 10H8v-4L18 2z",
+  ],
+  side_hustle: [
+    "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z",
+    "M12 6v6l4 2",
+  ],
+  investment_return: [
+    "M22 12h-4l-3 9L9 3l-3 9H2",
+  ],
+  refund: [
+    "M3 12a9 9 0 109-9",
+    "M3 3v9h9",
+  ],
+  gift: [
+    "M20 12v10H4V12",
+    "M2 7h20v5H2z",
+    "M12 22V7",
+    "M12 7a4 4 0 00-4-4c-1.1 0-2 .9-2 2 0 2 6 2 6 2z",
+    "M12 7a4 4 0 014-4c1.1 0 2 .9 2 2 0 2-6 2-6 2z",
+  ],
+  other_income: [
+    "M2 16.1A5 5 0 0115.9 2L22 8.1 8.1 22 2 16.1z",
+    "M17.5 6.5l-10 10",
   ],
 };
 
@@ -71,19 +104,19 @@ const ICON_PATHS: Record<Category, string[]> = {
 type CategoryPickerProps = {
   value: Category | null;
   onChange: (category: Category) => void;
-  includeIncome?: boolean;
+  mode?: "expense" | "income";
   onAddNew?: () => void;
 };
 
 export function CategoryPicker({
   value,
   onChange,
-  includeIncome = false,
+  mode = "expense",
   onAddNew,
 }: CategoryPickerProps) {
-  const cats: Category[] = includeIncome
-    ? [...CATEGORY_ORDER, "income"]
-    : CATEGORY_ORDER;
+  const cats: Category[] = mode === "income"
+    ? INCOME_CATEGORY_ORDER
+    : EXPENSE_CATEGORY_ORDER;
 
   return (
     <div className="flex gap-3 overflow-x-auto pt-1.5 pb-2 pl-[5px]" style={{ scrollbarWidth: "none" }}>

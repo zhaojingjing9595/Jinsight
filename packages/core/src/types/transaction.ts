@@ -1,8 +1,6 @@
 export type TransactionType = "INCOME" | "EXPENSE";
 
-// Ordered: Rent, Utility Bills, Subscriptions, Grocery, Dining Out,
-//          Shopping, Entertainment, Transportation, Education, Travel, Others
-export type Category =
+export type ExpenseCategory =
   | "rent"
   | "utilities"
   | "subscriptions"
@@ -13,8 +11,19 @@ export type Category =
   | "transport"
   | "education"
   | "travel"
-  | "other"
-  | "income";
+  | "other";
+
+export type IncomeCategory =
+  | "salary"
+  | "bonus"
+  | "freelance"
+  | "side_hustle"
+  | "investment_return"
+  | "refund"
+  | "gift"
+  | "other_income";
+
+export type Category = ExpenseCategory | IncomeCategory;
 
 export type Transaction = {
   id: string;

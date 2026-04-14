@@ -13,7 +13,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     accountId: "acc1",
     amount: 8500,
     type: "INCOME",
-    category: "income",
+    category: "salary",
     description: "Monthly salary",
     date: new Date("2026-04-01T09:00:00"),
     isRecurring: true,

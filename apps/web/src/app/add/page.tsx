@@ -43,7 +43,7 @@ export default function AddPage() {
       <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Type toggle */}
         <div className="flex justify-center">
-          <TypeToggle value={type} onChange={setType} />
+          <TypeToggle value={type} onChange={(t) => { setType(t); setCategory(null); }} />
         </div>
 
         {/* Category picker — above amount */}
@@ -54,7 +54,7 @@ export default function AddPage() {
           <CategoryPicker
             value={category}
             onChange={setCategory}
-            includeIncome={type === "INCOME"}
+            mode={isExpense ? "expense" : "income"}
             onAddNew={() => {
               // TODO: open new-category modal
             }}
@@ -78,19 +78,40 @@ export default function AddPage() {
         {/* NumPad */}
         <NumPad value={amount} onChange={setAmount} />
 
-        {/* Name (optional) */}
+        {/* Name — optional when category is set, required otherwise */}
         <div>
           <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
-            Name <span className="font-normal text-muted">(optional)</span>
+            Name{" "}
+            {category ? (
+              <span className="font-normal text-muted">(optional)</span>
+            ) : (
+              <span className="font-normal text-alert">(required)</span>
+            )}
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Coffee with Jun"
-            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee]"
+            placeholder={category ? "e.g. Coffee with Jun" : "What was this for?"}
+            className={`font-body w-full px-3 py-2 text-[13px] border-2 rounded-btn bg-base focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee] ${
+              !category && !name.trim() ? "border-alert" : "border-ink"
+            }`}
           />
         </div>
+
+        {/* Assign to category — shown when no category picked and name entered */}
+        {!category && name.trim() && (
+          <div>
+            <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
+              Assign "{name.trim()}" to a category
+            </p>
+            <CategoryPicker
+              value={category}
+              onChange={setCategory}
+              mode={isExpense ? "expense" : "income"}
+            />
+          </div>
+        )}
 
         {/* More options (collapsed) — Date + Recurring only */}
         <button
@@ -147,7 +168,7 @@ export default function AddPage() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={parseFloat(amount) === 0}
+          disabled={parseFloat(amount) === 0 || (!category && !name.trim())}
           className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
             saved
               ? "bg-goal text-ink"

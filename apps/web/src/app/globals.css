@@ -27,7 +27,25 @@
   --cat-education:      #cce972;
   --cat-travel:         #f0c000;
   --cat-other:          #d4d4d4;
-  --cat-income:         #2ad2a3;
+  --cat-salary:         #2ad2a3;
+  --cat-bonus:          #feb704;
+  --cat-freelance:      #a57dee;
+  --cat-side-hustle:    #f07030;
+  --cat-invest-return:  #cce972;
+  --cat-refund:         #9090cc;
+  --cat-gift:           #fdb6f0;
+  --cat-other-income:   #cdb1e7;
+  --cat-green-1:        #cfee30;
+  --cat-green-2:        #00b84a;
+  --cat-green-3:        #bbfda1;
+  --cat-orange-1:       #f0452f;
+  --cat-orange-2:       #eaa108;
+  --cat-purple-1:       #c5a2ff;
+  --cat-yellow-1:       #f9df0d;
+  --cat-blue-1:         #70cdde;
+  --cat-blue-2:         #0093b2;
+  --cat-blue-3:         #7189fe;
+
 
   /* === TYPOGRAPHY === */
   --font-display:       'Barlow Condensed', sans-serif;
@@ -93,7 +111,16 @@
   --color-cat-education:     #cce972;
   --color-cat-travel:        #f0c000;
   --color-cat-other:         #d4d4d4;
-  --color-cat-income:        #2ad2a3;
+  --color-cat-salary:        #2ad2a3;
+  --color-cat-bonus:         #feb704;
+  --color-cat-freelance:     #a57dee;
+  --color-cat-side-hustle:   #f07030;
+  --color-cat-invest-return: #cce972;
+  --color-cat-refund:        #9090cc;
+  --color-cat-gift:          #fdb6f0;
+  --color-cat-other-income:  #cdb1e7;
+  --color-cat-green-1:       #cfee30;
+  --color-cat-orange-1:      #f0452f;
 
   /* Fonts — font-display, font-body */
   --font-display: 'Barlow Condensed', sans-serif;
