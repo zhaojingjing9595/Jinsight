@@ -18,14 +18,15 @@ type ButtonProps = {
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   primary:
-    "bg-[#a57dee] text-white border-[#111008] shadow-[3px_3px_0_#111008] hover:shadow-[4px_4px_0_#111008] hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#111008]",
+    "bg-primary text-white border-ink shadow-neo-sm hover:shadow-neo-md hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-neo-pressed",
   income:
-    "bg-[#2ad2a3] text-[#111008] border-[#111008] shadow-[3px_3px_0_#111008] hover:shadow-[4px_4px_0_#111008] hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#111008]",
-  dark: "bg-[#111008] text-[#a57dee] border-[#333] shadow-[3px_3px_0_#555555] hover:shadow-[4px_4px_0_#555555] hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#555555]",
+    "bg-income text-ink border-ink shadow-neo-sm hover:shadow-neo-md hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-neo-pressed",
+  dark:
+    "bg-ink text-primary border-[#333] shadow-[3px_3px_0_#555555] hover:shadow-neo-dark hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#555555]",
   ghost:
-    "bg-[#fcfaeb] text-[#111008] border-[#111008] hover:-translate-x-px hover:-translate-y-px",
+    "bg-base text-ink border-ink hover:-translate-x-px hover:-translate-y-px",
   danger:
-    "bg-[#fc524f] text-white border-[#111008] shadow-[3px_3px_0_#111008] hover:shadow-[4px_4px_0_#111008] hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#111008]",
+    "bg-alert text-white border-ink shadow-neo-sm hover:shadow-neo-md hover:-translate-x-px hover:-translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-neo-pressed",
 };
 
 const SIZE_STYLES: Record<ButtonSize, string> = {
@@ -51,8 +52,8 @@ export function Button({
       disabled={disabled}
       className={[
         "inline-flex items-center justify-center gap-2",
-        "font-[700] font-[Space_Grotesk,sans-serif]",
-        "border-2 rounded-[8px]",
+        "font-[700] font-body",
+        "border-2 rounded-btn",
         "transition-all duration-150 cursor-pointer",
         "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
         VARIANT_STYLES[variant],

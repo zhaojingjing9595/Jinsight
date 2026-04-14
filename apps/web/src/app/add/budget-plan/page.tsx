@@ -6,6 +6,7 @@ import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Category } from "@jinsight/core";
 import type { BudgetPlanType, CategoryAllocation } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
+import { AddSwitcher } from "@/components/AddSwitcher";
 import { NumPad } from "@/components/NumPad";
 
 // ─── Plan type options ─────────────────────────────────────────────────────────
@@ -61,7 +62,6 @@ export default function BudgetPlanPage() {
   }
 
   function handleSave() {
-    // TODO: wire to API when auth/DB is ready
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -73,28 +73,11 @@ export default function BudgetPlanPage() {
   }
 
   return (
-    <div
-      className="flex flex-col max-w-[480px] mx-auto bg-[#fcfaeb]"
-      style={{ height: "100dvh" }}
-    >
-      {/* ── Top bar ── */}
-      <div className="flex-none px-4 pt-6 pb-3">
-        <div className="flex items-center gap-3 mb-3">
-          <Link
-            href="/add"
-            className="text-[13px] font-bold text-[#888] hover:text-[#111008] transition-colors"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            ← Add
-          </Link>
-          <h1
-            className="text-[11px] font-black uppercase tracking-[3px] text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            Budget Plan
-          </h1>
-        </div>
+    <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
+      <AddSwitcher active="budget" />
 
+      {/* ── Top bar ── */}
+      <div className="flex-none px-4 pb-3">
         {/* Type chips */}
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {PLAN_TYPES.map((pt) => {
@@ -104,14 +87,9 @@ export default function BudgetPlanPage() {
                 key={pt.value}
                 type="button"
                 onClick={() => setPlanType(pt.value)}
-                className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-[20px] border-[2px] text-[11px] font-bold uppercase tracking-[0.5px] transition-all"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  borderColor: "#111008",
-                  backgroundColor: isActive ? "#a57dee" : "#fcfaeb",
-                  color: isActive ? "#fff" : "#888",
-                  boxShadow: isActive ? "2px 2px 0 #111008" : "none",
-                }}
+                className={`font-body flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-pill border-2 border-ink text-[11px] font-bold uppercase tracking-[0.5px] transition-all ${
+                  isActive ? "bg-primary text-white shadow-neo-xs" : "bg-base text-muted shadow-none"
+                }`}
               >
                 <span>{pt.icon}</span>
                 {pt.label}
@@ -122,16 +100,10 @@ export default function BudgetPlanPage() {
       </div>
 
       {/* ── Form body ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Plan name */}
         <div>
-          <label
-            className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Plan Name
           </label>
           <input
@@ -143,61 +115,53 @@ export default function BudgetPlanPage() {
               planType === "event" ? "e.g. Jin's Birthday" :
               "Give it a name…"
             }
-            className="w-full px-3 py-2.5 text-[14px] font-bold border-[2px] border-[#111008] rounded-[10px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee] focus:shadow-[2px_2px_0_#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", boxShadow: "2px 2px 0 #111008" }}
+            className="font-body w-full px-3 py-2.5 text-[14px] font-bold border-2 border-ink rounded-[10px] bg-base shadow-neo-xs focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee]"
           />
         </div>
 
         {/* Dates */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label
-              className="text-[10px] font-bold uppercase tracking-[2px] text-[#111008]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
+            <label className="font-body text-[10px] font-bold uppercase tracking-[2px] text-ink">
               Dates
             </label>
             <button
               type="button"
               onClick={() => setUseDuration((v) => !v)}
-              className="text-[10px] font-bold text-[#a57dee] uppercase tracking-[1px]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              className="font-body text-[10px] font-bold text-primary uppercase tracking-[1px]"
             >
               {useDuration ? "Use end date" : "Use duration"}
             </button>
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <p className="text-[9px] text-[#888] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Start</p>
+              <p className="font-body text-[9px] text-muted mb-0.5">Start</p>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
               />
             </div>
             {useDuration ? (
-              <div style={{ width: "90px" }}>
-                <p className="text-[9px] text-[#888] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Days</p>
+              <div className="w-[90px]">
+                <p className="font-body text-[9px] text-muted mb-0.5">Days</p>
                 <input
                   type="number"
                   min="1"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
                 />
               </div>
             ) : (
               <div className="flex-1">
-                <p className="text-[9px] text-[#888] mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>End</p>
+                <p className="font-body text-[9px] text-muted mb-0.5">End</p>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
                 />
               </div>
             )}
@@ -206,31 +170,20 @@ export default function BudgetPlanPage() {
 
         {/* Total budget */}
         <div>
-          <label
-            className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Total Budget
           </label>
           <button
             type="button"
             onClick={() => setEditingTotal((v) => !v)}
-            className="w-full border-[2.5px] border-[#111008] rounded-[12px] py-3 flex flex-col items-center transition-all"
-            style={{
-              backgroundColor: editingTotal ? "#fff9e6" : "#fcfaeb",
-              boxShadow: "3px 3px 0 #111008",
-            }}
+            className={`w-full border-[2.5px] border-ink rounded-[12px] py-3 flex flex-col items-center shadow-neo-sm transition-all ${
+              editingTotal ? "bg-[#fff9e6]" : "bg-base"
+            }`}
           >
-            <p
-              className="font-black leading-none text-[#111008]"
-              style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: "clamp(28px, 6vw, 40px)",
-              }}
-            >
+            <p className="font-display font-black leading-none text-ink text-[clamp(28px,6vw,40px)]">
               {formatCurrency(totalNum, "ILS")}
             </p>
-            <p className="text-[9px] text-[#888] mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="font-body text-[9px] text-muted mt-0.5">
               {editingTotal ? "tap to close numpad" : "tap to edit"}
             </p>
           </button>
@@ -244,19 +197,15 @@ export default function BudgetPlanPage() {
         {/* Category allocations */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label
-              className="text-[10px] font-bold uppercase tracking-[2px] text-[#111008]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
+            <label className="font-body text-[10px] font-bold uppercase tracking-[2px] text-ink">
               Category Breakdown
-              <span className="ml-1 font-normal text-[#888]">(optional)</span>
+              <span className="ml-1 font-normal text-muted">(optional)</span>
             </label>
             <button
               type="button"
               onClick={addAllocation}
               disabled={allocations.length >= EXPENSE_CATS.length}
-              className="text-[11px] font-bold text-[#a57dee] uppercase tracking-[1px] disabled:opacity-40"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              className="font-body text-[11px] font-bold text-primary uppercase tracking-[1px] disabled:opacity-40"
             >
               + Add category
             </button>
@@ -272,21 +221,19 @@ export default function BudgetPlanPage() {
                 return (
                   <div
                     key={i}
-                    className="flex items-center gap-2 p-2 border-[2px] border-[#111008] rounded-[10px]"
-                    style={{ boxShadow: "2px 2px 0 #111008", backgroundColor: "#fcfaeb" }}
+                    className="flex items-center gap-2 p-2 border-2 border-ink rounded-[10px] bg-base shadow-neo-xs"
                   >
                     {/* Category select */}
                     <div
-                      className="flex items-center justify-center text-[18px] border-[1.5px] border-[#111008] rounded-[8px] flex-none"
-                      style={{ width: "36px", height: "36px", backgroundColor: meta.color }}
+                      className="w-9 h-9 flex items-center justify-center text-[18px] border-[1.5px] border-ink rounded-icon flex-none"
+                      style={{ backgroundColor: meta.color }}
                     >
                       {meta.icon}
                     </div>
                     <select
                       value={alloc.category}
                       onChange={(e) => updateAllocation(i, "category", e.target.value)}
-                      className="flex-1 bg-transparent border-none text-[12px] font-bold focus:outline-none"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#111008" }}
+                      className="font-body flex-1 bg-transparent border-none text-[12px] font-bold text-ink focus:outline-none"
                     >
                       {unusedCats.map((c) => (
                         <option key={c} value={c}>
@@ -301,13 +248,12 @@ export default function BudgetPlanPage() {
                       value={alloc.limit || ""}
                       onChange={(e) => updateAllocation(i, "limit", parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-[80px] px-2 py-1 text-[13px] font-bold text-right border-[1.5px] border-[#111008] rounded-[6px] bg-[#fcfaeb] focus:outline-none"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                      className="font-body w-[80px] px-2 py-1 text-[13px] font-bold text-right border-[1.5px] border-ink rounded-[6px] bg-base focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => removeAllocation(i)}
-                      className="text-[#fc524f] font-bold text-[16px] flex-none"
+                      className="text-alert font-bold text-[16px] flex-none"
                     >
                       ×
                     </button>
@@ -318,19 +264,14 @@ export default function BudgetPlanPage() {
               {/* Allocation summary */}
               {totalNum > 0 && (
                 <div
-                  className="flex justify-between items-center px-3 py-2 rounded-[8px] border-[1.5px] border-[#111008]"
-                  style={{ backgroundColor: remaining < 0 ? "#fff0f0" : "#f0fdf9" }}
+                  className={`flex justify-between items-center px-3 py-2 rounded-btn border-[1.5px] border-ink ${
+                    remaining < 0 ? "bg-[#fff0f0]" : "bg-[#f0fdf9]"
+                  }`}
                 >
-                  <span className="text-[11px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#888" }}>
+                  <span className="font-body text-[11px] font-bold text-muted">
                     Allocated
                   </span>
-                  <span
-                    className="text-[13px] font-black"
-                    style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
-                      color: remaining < 0 ? "#fc524f" : "#2ad2a3",
-                    }}
-                  >
+                  <span className={`font-body text-[13px] font-black ${remaining < 0 ? "text-alert" : "text-income"}`}>
                     {formatCurrency(allocated, "ILS")} / {formatCurrency(totalNum, "ILS")}
                   </span>
                 </div>
@@ -341,10 +282,7 @@ export default function BudgetPlanPage() {
 
         {/* Notes */}
         <div>
-          <label
-            className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Notes
           </label>
           <textarea
@@ -352,8 +290,7 @@ export default function BudgetPlanPage() {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Anything to keep in mind…"
             rows={2}
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[10px] bg-[#fcfaeb] resize-none focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-[10px] bg-base resize-none focus:outline-none focus:border-primary"
           />
         </div>
 
@@ -362,13 +299,9 @@ export default function BudgetPlanPage() {
           type="button"
           onClick={handleSave}
           disabled={!name || totalNum === 0}
-          className="w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-[#111008] rounded-[10px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: saved ? "#cce972" : "#a57dee",
-            color: saved ? "#111008" : "#fff",
-            boxShadow: "4px 4px 0 #111008",
-          }}
+          className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
+            saved ? "bg-goal text-ink" : "bg-primary text-white"
+          }`}
         >
           {saved ? "✓ Plan Created!" : "Create Budget Plan"}
         </button>

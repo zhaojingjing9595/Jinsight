@@ -31,10 +31,10 @@ export function TransactionRow({
       onClick={onClick}
       className={[
         "flex items-center gap-3 px-3 py-[9px] cursor-pointer",
-        "border-[#111008] transition-colors duration-150",
+        "border-ink transition-colors duration-150",
         isActive
-          ? "bg-[#a57dee]"
-          : "bg-[#fcfaeb] hover:bg-[#f0eede]",
+          ? "bg-primary"
+          : "bg-base hover:bg-[#f0eede]",
         isFirst ? "rounded-t-[10px]" : "",
         isLast ? "rounded-b-[10px]" : "border-b-2",
       ]
@@ -43,7 +43,7 @@ export function TransactionRow({
     >
       {/* Category icon box */}
       <div
-        className="w-8 h-8 flex items-center justify-center rounded-[8px] border-2 border-[#111008] flex-shrink-0 text-[14px]"
+        className="w-8 h-8 flex items-center justify-center rounded-icon border-2 border-ink flex-shrink-0 text-[14px]"
         style={{ backgroundColor: categoryColor }}
       >
         {categoryIcon}
@@ -53,16 +53,16 @@ export function TransactionRow({
       <div className="flex-1 min-w-0">
         <p
           className={[
-            "text-[12px] font-[700] font-[Space_Grotesk,sans-serif] truncate",
-            isActive ? "text-white" : "text-[#111008]",
+            "text-[12px] font-[700] font-body truncate",
+            isActive ? "text-white" : "text-ink",
           ].join(" ")}
         >
           {transaction.description ?? categoryLabel}
         </p>
         <p
           className={[
-            "text-[10px] font-[400] font-[Space_Grotesk,sans-serif]",
-            isActive ? "text-[#e0ccff]" : "text-[#666]",
+            "text-[10px] font-[400] font-body",
+            isActive ? "text-primary-muted" : "text-[#666]",
           ].join(" ")}
         >
           {categoryLabel} · {formatShortDate(transaction.date)}
@@ -73,12 +73,12 @@ export function TransactionRow({
       <p
         className={[
           "text-[17px] font-[900] flex-shrink-0",
-          "font-[Barlow_Condensed,sans-serif]",
+          "font-display",
           isActive
             ? "text-white"
             : isIncome
-              ? "text-[#2ad2a3]"
-              : "text-[#fc524f]",
+              ? "text-income"
+              : "text-alert",
         ].join(" ")}
       >
         {isIncome ? "+" : "-"}

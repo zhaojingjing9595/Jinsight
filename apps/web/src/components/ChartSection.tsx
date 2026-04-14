@@ -36,20 +36,14 @@ export function ChartSection({
   return (
     <div className="flex flex-col h-full">
       {/* ── Tab toggle ── */}
-      <div
-        className="flex-none flex gap-0.5 mb-2 p-0.5 rounded-[10px] border-[2px] border-[#111008] w-fit self-end"
-        style={{ backgroundColor: "#111008" }}
-      >
+      <div className="flex-none flex gap-0.5 mb-2 p-0.5 rounded-[10px] border-2 border-ink w-fit self-end bg-ink">
         {(["pie", "bar"] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
-            className="px-3 py-[3px] rounded-[7px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-colors"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              backgroundColor: view === v ? "#feb704" : "transparent",
-              color: view === v ? "#111008" : "#fcfaeb",
-            }}
+            className={`font-body px-3 py-[3px] rounded-[7px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-colors ${
+              view === v ? "bg-reward text-ink" : "bg-transparent text-base"
+            }`}
           >
             {v === "pie" ? "Breakdown" : "6-Month"}
           </button>

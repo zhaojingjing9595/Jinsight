@@ -42,6 +42,8 @@
   --shadow-neo-lg:      5px 5px 0 #111008;
   --shadow-neo-md:      4px 4px 0 #111008;
   --shadow-neo-sm:      3px 3px 0 #111008;
+  --shadow-neo-xs:      2px 2px 0 #111008;
+  --shadow-neo-pressed: 1px 1px 0 #111008;
   --shadow-neo-dark:    4px 4px 0 #555555;
 
   /* === BORDER RADIUS === */
@@ -77,6 +79,7 @@
   --color-fun:          #fdb6f0;
   --color-ink:          #111008;
   --color-muted:        #888888;
+  --color-primary-muted: #e0ccff;
 
   /* Category colors — bg-cat-*, text-cat-* */
   --color-cat-rent:          #cdb1e7;
@@ -96,11 +99,13 @@
   --font-display: 'Barlow Condensed', sans-serif;
   --font-body:    'Space Grotesk', sans-serif;
 
-  /* Shadows — shadow-neo-lg, shadow-neo-md, shadow-neo-sm */
-  --shadow-neo-lg:   5px 5px 0 #111008;
-  --shadow-neo-md:   4px 4px 0 #111008;
-  --shadow-neo-sm:   3px 3px 0 #111008;
-  --shadow-neo-dark: 4px 4px 0 #555555;
+  /* Shadows */
+  --shadow-neo-lg:      5px 5px 0 #111008;
+  --shadow-neo-md:      4px 4px 0 #111008;
+  --shadow-neo-sm:      3px 3px 0 #111008;
+  --shadow-neo-xs:      2px 2px 0 #111008;
+  --shadow-neo-pressed: 1px 1px 0 #111008;
+  --shadow-neo-dark:    4px 4px 0 #555555;
 
   /* Border radii — rounded-card, rounded-btn, etc. */
   --radius-card:    14px;

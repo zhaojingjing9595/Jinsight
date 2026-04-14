@@ -36,7 +36,7 @@ export function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[10px] font-[700] uppercase tracking-[2px] text-[#111008] font-[Space_Grotesk,sans-serif]"
+          className="text-[10px] font-[700] uppercase tracking-[2px] text-ink font-body"
         >
           {label}
         </label>
@@ -52,21 +52,21 @@ export function Input({
         disabled={disabled}
         className={[
           "w-full px-3 py-2.5",
-          "bg-[#fcfaeb] text-[#111008]",
-          "border-2 border-[#111008] rounded-[8px]",
-          "text-[13px] font-[400] font-[Space_Grotesk,sans-serif]",
-          "placeholder:text-[#888]",
-          "focus:outline-none focus:border-[#a57dee] focus:shadow-[3px_3px_0_#a57dee]",
+          "bg-base text-ink",
+          "border-2 border-ink rounded-btn",
+          "text-[13px] font-[400] font-body",
+          "placeholder:text-muted",
+          "focus:outline-none focus:border-primary focus:shadow-[3px_3px_0_#a57dee]",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           "transition-all duration-150",
-          error ? "border-[#fc524f] shadow-[3px_3px_0_#fc524f]" : "",
+          error ? "border-alert shadow-[3px_3px_0_#fc524f]" : "",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
       />
       {error && (
-        <span className="text-[11px] text-[#fc524f] font-[700] font-[Space_Grotesk,sans-serif]">
+        <span className="text-[11px] text-alert font-[700] font-body">
           {error}
         </span>
       )}

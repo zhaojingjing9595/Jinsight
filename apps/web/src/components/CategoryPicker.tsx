@@ -86,7 +86,7 @@ export function CategoryPicker({
     : CATEGORY_ORDER;
 
   return (
-    <div className="flex gap-3 overflow-x-auto" style={{ scrollbarWidth: "none", paddingTop: "6px", paddingBottom: "8px", paddingLeft: "5px" }}>
+    <div className="flex gap-3 overflow-x-auto pt-1.5 pb-2 pl-[5px]" style={{ scrollbarWidth: "none" }}>
       {cats.map((cat) => {
         const meta = CATEGORY_META[cat];
         const isSelected = value === cat;
@@ -97,18 +97,14 @@ export function CategoryPicker({
             key={cat}
             type="button"
             onClick={() => onChange(cat)}
-            className="flex-none flex flex-col items-center gap-1.5 active:scale-95"
-            style={{ transition: "transform 120ms, opacity 120ms" }}
+            className="flex-none flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-[120ms]"
           >
             <div
-              className="flex items-center justify-center border-[2.5px] border-[#111008] rounded-[10px]"
+              className="w-[52px] h-[52px] flex items-center justify-center border-[2.5px] border-ink rounded-[10px] transition-all duration-[120ms]"
               style={{
-                width: "52px",
-                height: "52px",
                 backgroundColor: meta.color,
-                boxShadow: isSelected ? "4px 4px 0 #111008" : "2px 2px 0 #111008",
+                boxShadow: isSelected ? "var(--shadow-neo-md)" : "var(--shadow-neo-xs)",
                 transform: isSelected ? "translate(-2px, -2px) scale(1.1)" : "none",
-                transition: "transform 120ms, box-shadow 120ms",
                 opacity: isSelected ? 1 : 0.72,
               }}
             >
@@ -128,17 +124,9 @@ export function CategoryPicker({
               </svg>
             </div>
             <span
-              className="text-center leading-tight"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: "9px",
-                fontWeight: isSelected ? 800 : 500,
-                color: isSelected ? "#111008" : "#888",
-                maxWidth: "52px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
+              className={`font-body text-center leading-tight text-[9px] max-w-[52px] overflow-hidden text-ellipsis whitespace-nowrap ${
+                isSelected ? "font-[800] text-ink" : "font-[500] text-muted"
+              }`}
             >
               {meta.label}
             </span>
@@ -153,10 +141,7 @@ export function CategoryPicker({
           onClick={onAddNew}
           className="flex-none flex flex-col items-center gap-1.5 transition-all active:scale-95"
         >
-          <div
-            className="flex items-center justify-center border-[2px] border-dashed border-[#aaa] rounded-[10px]"
-            style={{ width: "52px", height: "52px", backgroundColor: "#f4f4f4" }}
-          >
+          <div className="w-[52px] h-[52px] flex items-center justify-center border-2 border-dashed border-[#aaa] rounded-[10px] bg-[#f4f4f4]">
             <svg
               viewBox="0 0 24 24"
               width="22"
@@ -169,14 +154,7 @@ export function CategoryPicker({
               <path d="M12 5v14M5 12h14" />
             </svg>
           </div>
-          <span
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: "9px",
-              fontWeight: 500,
-              color: "#aaa",
-            }}
-          >
+          <span className="font-body text-[9px] font-[500] text-[#aaa]">
             New
           </span>
         </button>

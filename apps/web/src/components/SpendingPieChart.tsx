@@ -61,10 +61,6 @@ export function SpendingPieChart({
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/*
-       * viewBox is wider than tall so the chart has room for labels on all
-       * four sides.  preserveAspectRatio keeps it centred and undistorted.
-       */}
       <svg
         viewBox="0 0 240 240"
         className="flex-1 min-h-0 w-full"
@@ -87,7 +83,7 @@ export function SpendingPieChart({
           cx={CX}
           cy={CY}
           r={INNER_R - 2}
-          fill="#fcfaeb"
+          fill="var(--color-base)"
           stroke="#111008"
           strokeWidth="2"
         />
@@ -124,17 +120,10 @@ export function SpendingPieChart({
         {arcs.map((a, i) => (
           <div key={i} className="flex items-center gap-1">
             <span
-              className="inline-block w-2.5 h-2.5 rounded-sm border border-[#111008] flex-shrink-0"
+              className="inline-block w-2.5 h-2.5 rounded-sm border border-ink flex-shrink-0"
               style={{ backgroundColor: a.color }}
             />
-            <span
-              style={{
-                fontFamily: "Space Grotesk, sans-serif",
-                fontSize: "10px",
-                fontWeight: 600,
-                color: "#111008",
-              }}
-            >
+            <span className="font-body text-[10px] font-semibold text-ink">
               {a.label}
             </span>
           </div>

@@ -1,19 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { formatCurrency } from "@jinsight/core";
 import type { Category, TransactionType } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
+import { AddSwitcher } from "@/components/AddSwitcher";
 import { NumPad } from "@/components/NumPad";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { TypeToggle } from "@/components/TypeToggle";
-
-const SWITCHER_TABS = [
-  { label: "Transaction", href: null               },
-  { label: "Budget",      href: "/add/budget-plan" },
-  { label: "Invest",      href: "/add/investment"  },
-] as const;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -31,7 +25,6 @@ export default function AddPage() {
   const isExpense = type === "EXPENSE";
 
   function handleSave() {
-    // TODO: wire to API when auth/DB is ready
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -43,50 +36,11 @@ export default function AddPage() {
   }
 
   return (
-    <div
-      className="flex flex-col max-w-[480px] mx-auto bg-[#fcfaeb]"
-      style={{ height: "100dvh" }}
-    >
-      {/* ── Type switcher — card tabs ── */}
-      <div className="flex-none flex gap-2.5 px-4 pt-5 pb-3">
-        {SWITCHER_TABS.map((tab) => {
-          const isActive = tab.href === null;
-          const inner = (
-            <div
-              className="flex-1 flex items-center justify-center py-3 border-[2px] border-[#111008] rounded-[12px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-              style={{
-                backgroundColor: isActive ? "#a57dee" : "#fcfaeb",
-                boxShadow: isActive ? "3px 3px 0 #111008" : "1px 1px 0 #ccc",
-                transform: isActive ? "translate(-1px, -1px)" : "none",
-              }}
-            >
-              <span
-                className="text-[11px] font-black uppercase tracking-[1.5px]"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  color: "#111008",
-                }}
-              >
-                {tab.label}
-              </span>
-            </div>
-          );
-
-          return tab.href ? (
-            <Link key={tab.label} href={tab.href} className="flex-1">
-              {inner}
-            </Link>
-          ) : (
-            <div key={tab.label} className="flex-1">{inner}</div>
-          );
-        })}
-      </div>
+    <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
+      <AddSwitcher active="transaction" />
 
       {/* ── Scrollable form body ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Type toggle */}
         <div className="flex justify-center">
           <TypeToggle value={type} onChange={setType} />
@@ -94,10 +48,7 @@ export default function AddPage() {
 
         {/* Category picker — above amount */}
         <div>
-          <p
-            className="text-[10px] font-bold uppercase tracking-[2px] mb-2 text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
+          <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
             Category
           </p>
           <CategoryPicker
@@ -112,28 +63,14 @@ export default function AddPage() {
 
         {/* Amount display */}
         <div
-          className="border-[2.5px] border-[#111008] rounded-[14px] flex flex-col items-center justify-center py-4"
-          style={{
-            boxShadow: "4px 4px 0 #111008",
-            backgroundColor: isExpense ? "#fff5f5" : "#f0fdf9",
-          }}
+          className={`border-[2.5px] border-ink rounded-card flex flex-col items-center justify-center py-4 shadow-neo-md ${
+            isExpense ? "bg-[#fff5f5]" : "bg-[#f0fdf9]"
+          }`}
         >
-          <p
-            className="text-[11px] font-bold uppercase tracking-[2px] mb-1"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              color: isExpense ? "#fc524f" : "#2ad2a3",
-            }}
-          >
+          <p className={`font-body text-[11px] font-bold uppercase tracking-[2px] mb-1 ${isExpense ? "text-alert" : "text-income"}`}>
             {isExpense ? "Spending" : "Earning"}
           </p>
-          <p
-            className="font-black leading-none text-[#111008]"
-            style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: "clamp(36px, 8vw, 52px)",
-            }}
-          >
+          <p className="font-display font-black leading-none text-ink text-[clamp(36px,8vw,52px)]">
             {displayAmount}
           </p>
         </div>
@@ -143,19 +80,15 @@ export default function AddPage() {
 
         {/* Name (optional) */}
         <div>
-          <label
-            className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            Name <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+            Name <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Coffee with Jun"
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee] focus:shadow-[2px_2px_0_#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee]"
           />
         </div>
 
@@ -163,15 +96,11 @@ export default function AddPage() {
         <button
           type="button"
           onClick={() => setShowMore((v) => !v)}
-          className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[1.5px] text-[#888] self-start"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          className="font-body flex items-center gap-2 text-[11px] font-bold uppercase tracking-[1.5px] text-muted self-start"
         >
           <span
-            style={{
-              display: "inline-block",
-              transition: "transform 150ms",
-              transform: showMore ? "rotate(90deg)" : "none",
-            }}
+            className="inline-block transition-transform duration-150"
+            style={{ transform: showMore ? "rotate(90deg)" : "none" }}
           >
             ▶
           </span>
@@ -182,43 +111,31 @@ export default function AddPage() {
           <div className="flex flex-col gap-3">
             {/* Date */}
             <div>
-              <label
-                className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
+              <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
                 Date
               </label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
               />
             </div>
 
             {/* Recurring */}
             <div className="flex items-center justify-between">
-              <span
-                className="text-[12px] font-bold text-[#111008]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
+              <span className="font-body text-[12px] font-bold text-ink">
                 Recurring
               </span>
               <button
                 type="button"
                 onClick={() => setIsRecurring((v) => !v)}
-                className="border-[2px] border-[#111008] rounded-[20px] transition-all"
-                style={{
-                  width: "46px",
-                  height: "26px",
-                  backgroundColor: isRecurring ? "#a57dee" : "#d4d4d4",
-                  boxShadow: "2px 2px 0 #111008",
-                  position: "relative",
-                }}
+                className={`relative w-[46px] h-[26px] border-2 border-ink rounded-pill shadow-neo-xs transition-all ${
+                  isRecurring ? "bg-primary" : "bg-[#d4d4d4]"
+                }`}
               >
                 <span
-                  className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white border-[1.5px] border-[#111008] transition-all"
+                  className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white border-[1.5px] border-ink transition-all"
                   style={{ left: isRecurring ? "22px" : "3px" }}
                 />
               </button>
@@ -231,13 +148,13 @@ export default function AddPage() {
           type="button"
           onClick={handleSave}
           disabled={parseFloat(amount) === 0}
-          className="w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-[#111008] rounded-[10px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: saved ? "#cce972" : isExpense ? "#fc524f" : "#2ad2a3",
-            color: saved ? "#111008" : isExpense ? "#fff" : "#111008",
-            boxShadow: "4px 4px 0 #111008",
-          }}
+          className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
+            saved
+              ? "bg-goal text-ink"
+              : isExpense
+                ? "bg-alert text-white"
+                : "bg-income text-ink"
+          }`}
         >
           {saved ? "✓ Saved!" : `Save ${isExpense ? "Expense" : "Income"}`}
         </button>

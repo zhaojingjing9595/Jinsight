@@ -10,12 +10,12 @@ type CardProps = {
 };
 
 const VARIANT_STYLES: Record<CardVariant, string> = {
-  default: "bg-[#fcfaeb] border-[#111008] shadow-[4px_4px_0_#111008]",
-  dark: "bg-[#111008] border-[#333] shadow-[4px_4px_0_#555555]",
-  primary: "bg-[#a57dee] border-[#111008] shadow-[4px_4px_0_#111008]",
-  income: "bg-[#2ad2a3] border-[#111008] shadow-[4px_4px_0_#111008]",
-  goal: "bg-[#cce972] border-[#111008] shadow-[4px_4px_0_#111008]",
-  reward: "bg-[#feb704] border-[#111008] shadow-[4px_4px_0_#111008]",
+  default: "bg-base border-ink shadow-neo-md",
+  dark:    "bg-ink border-[#333] shadow-neo-dark",
+  primary: "bg-primary border-ink shadow-neo-md",
+  income:  "bg-income border-ink shadow-neo-md",
+  goal:    "bg-goal border-ink shadow-neo-md",
+  reward:  "bg-reward border-ink shadow-neo-md",
 };
 
 const PADDING_STYLES = {
@@ -33,7 +33,7 @@ export function Card({
   return (
     <div
       className={[
-        "border-[2.5px] rounded-[14px]",
+        "border-[2.5px] rounded-card",
         VARIANT_STYLES[variant],
         PADDING_STYLES[padding],
         className,

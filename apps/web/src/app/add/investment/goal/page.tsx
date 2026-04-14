@@ -46,7 +46,6 @@ export default function InvestmentGoalPage() {
   }
 
   function handleSave() {
-    // TODO: wire to API
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -55,17 +54,14 @@ export default function InvestmentGoalPage() {
   }
 
   return (
-    <div
-      className="flex flex-col max-w-[480px] mx-auto bg-[#fcfaeb]"
-      style={{ height: "100dvh" }}
-    >
+    <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
       {/* ── Top bar ── */}
       <div className="flex-none px-4 pt-6 pb-3">
         <div className="flex items-center gap-3 mb-3">
-          <Link href="/add/investment" className="text-[13px] font-bold text-[#888]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <Link href="/add/investment" className="font-body text-[13px] font-bold text-muted">
             ← Investment
           </Link>
-          <h1 className="text-[11px] font-black uppercase tracking-[3px] text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="font-body text-[11px] font-black uppercase tracking-[3px] text-ink">
             Investment Goal
           </h1>
         </div>
@@ -77,14 +73,9 @@ export default function InvestmentGoalPage() {
               key={p.label}
               type="button"
               onClick={() => handlePreset(i)}
-              className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-[20px] border-[2px] text-[11px] font-bold uppercase tracking-[0.5px] transition-all"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                borderColor: "#111008",
-                backgroundColor: preset === i ? "#cce972" : "#fcfaeb",
-                color: preset === i ? "#111008" : "#888",
-                boxShadow: preset === i ? "2px 2px 0 #111008" : "none",
-              }}
+              className={`font-body flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-pill border-2 border-ink text-[11px] font-bold uppercase tracking-[0.5px] transition-all ${
+                preset === i ? "bg-goal text-ink shadow-neo-xs" : "bg-base text-muted shadow-none"
+              }`}
             >
               {p.icon} {p.label}
             </button>
@@ -93,13 +84,10 @@ export default function InvestmentGoalPage() {
       </div>
 
       {/* ── Form ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Goal name */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Goal Name
           </label>
           <input
@@ -107,26 +95,26 @@ export default function InvestmentGoalPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Tokyo House Down Payment"
-            className="w-full px-3 py-2.5 text-[14px] font-bold border-[2px] border-[#111008] rounded-[10px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee] focus:shadow-[2px_2px_0_#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", boxShadow: "2px 2px 0 #111008" }}
+            className="font-body w-full px-3 py-2.5 text-[14px] font-bold border-2 border-ink rounded-[10px] bg-base shadow-neo-xs focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee]"
           />
         </div>
 
         {/* Target amount */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Target Amount
           </label>
           <button
             type="button"
             onClick={() => { setEditingTarget((v) => !v); setEditingCurrent(false); }}
-            className="w-full border-[2.5px] border-[#111008] rounded-[12px] py-3 flex flex-col items-center transition-all"
-            style={{ backgroundColor: editingTarget ? "#fff9e6" : "#fcfaeb", boxShadow: "3px 3px 0 #111008" }}
+            className={`w-full border-[2.5px] border-ink rounded-[12px] py-3 flex flex-col items-center shadow-neo-sm transition-all ${
+              editingTarget ? "bg-[#fff9e6]" : "bg-base"
+            }`}
           >
-            <p className="font-black leading-none text-[#111008]" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "36px" }}>
+            <p className="font-display font-black leading-none text-ink text-[36px]">
               ₪{parseInt(targetAmount || "0").toLocaleString()}
             </p>
-            <p className="text-[9px] text-[#888] mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="font-body text-[9px] text-muted mt-0.5">
               {editingTarget ? "tap to close" : "tap to edit"}
             </p>
           </button>
@@ -135,16 +123,17 @@ export default function InvestmentGoalPage() {
 
         {/* Current amount */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Already Saved <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+            Already Saved <span className="font-normal text-muted">(optional)</span>
           </label>
           <button
             type="button"
             onClick={() => { setEditingCurrent((v) => !v); setEditingTarget(false); }}
-            className="w-full border-[2px] border-[#111008] rounded-[10px] py-2.5 flex flex-col items-center transition-all"
-            style={{ backgroundColor: editingCurrent ? "#f0fdf9" : "#fcfaeb", boxShadow: "2px 2px 0 #111008" }}
+            className={`w-full border-2 border-ink rounded-[10px] py-2.5 flex flex-col items-center shadow-neo-xs transition-all ${
+              editingCurrent ? "bg-[#f0fdf9]" : "bg-base"
+            }`}
           >
-            <p className="font-bold text-[18px] leading-none text-[#111008]" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <p className="font-display font-bold text-[18px] leading-none text-ink">
               ₪{parseInt(currentAmount || "0").toLocaleString()}
             </p>
           </button>
@@ -155,14 +144,14 @@ export default function InvestmentGoalPage() {
         {targetNum > 0 && (
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold text-[#888]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Progress</span>
-              <span className="text-[10px] font-bold text-[#2ad2a3]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <span className="font-body text-[10px] font-bold text-muted">Progress</span>
+              <span className="font-body text-[10px] font-bold text-income">
                 {progress.toFixed(0)}%
               </span>
             </div>
-            <div className="h-[12px] border-[2px] border-[#111008] rounded-[20px] overflow-hidden bg-[#fcfaeb]">
+            <div className="h-[12px] border-2 border-ink rounded-pill overflow-hidden bg-base">
               <div
-                className="h-full bg-[#2ad2a3] transition-all"
+                className="h-full bg-income transition-all"
                 style={{ width: `${progress}%`, borderRadius: "inherit" }}
               />
             </div>
@@ -171,22 +160,21 @@ export default function InvestmentGoalPage() {
 
         {/* Target date */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Target Date <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+            Target Date <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             type="date"
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Asset preference */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-2 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Asset Type <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
+            Asset Type <span className="font-normal text-muted">(optional)</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {ASSET_TYPES.map((at) => (
@@ -194,14 +182,9 @@ export default function InvestmentGoalPage() {
                 key={at.value}
                 type="button"
                 onClick={() => setAssetType(assetType === at.value ? null : at.value)}
-                className="px-3 py-1.5 rounded-[8px] border-[2px] text-[11px] font-bold transition-all"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  borderColor: "#111008",
-                  backgroundColor: assetType === at.value ? "#cce972" : "#fcfaeb",
-                  color: "#111008",
-                  boxShadow: assetType === at.value ? "2px 2px 0 #111008" : "none",
-                }}
+                className={`font-body px-3 py-1.5 rounded-btn border-2 border-ink text-[11px] font-bold text-ink transition-all ${
+                  assetType === at.value ? "bg-goal shadow-neo-xs" : "bg-base shadow-none"
+                }`}
               >
                 {at.label}
               </button>
@@ -214,13 +197,9 @@ export default function InvestmentGoalPage() {
           type="button"
           onClick={handleSave}
           disabled={!name || targetNum === 0}
-          className="w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-[#111008] rounded-[10px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: saved ? "#2ad2a3" : "#cce972",
-            color: "#111008",
-            boxShadow: "4px 4px 0 #111008",
-          }}
+          className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md text-ink transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
+            saved ? "bg-income" : "bg-goal"
+          }`}
         >
           {saved ? "✓ Goal Set!" : "Set Goal"}
         </button>

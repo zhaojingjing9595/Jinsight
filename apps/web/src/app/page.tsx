@@ -2,10 +2,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main
-      className="min-h-screen flex flex-col items-center justify-center px-6"
-      style={{ backgroundColor: "#a57dee" }}
-    >
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-primary">
       {/* Starburst decoration */}
       <svg
         width="46"
@@ -24,24 +21,17 @@ export default function HomePage() {
       </svg>
 
       {/* Logo + headline */}
-      <h1
-        className="text-[52px] font-[900] text-white text-center leading-[1.0] mb-3"
-        style={{ fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "-1px" }}
-      >
+      <h1 className="font-display text-[52px] font-[900] text-white text-center leading-[1.0] mb-3 tracking-tight">
         JINSIGHT
       </h1>
 
-      <p
-        className="text-[12px] text-[#e0ccff] text-center leading-[1.5] max-w-[280px] mb-10"
-        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-      >
+      <p className="font-body text-[12px] text-primary-muted text-center leading-[1.5] max-w-[280px] mb-10">
         The golden view of your finances. Track income, expenses, goals — and finally understand your money.
       </p>
 
       {/* Illustrated coin stack — inline SVG */}
       <div className="mb-10">
         <svg width="100" height="100" viewBox="0 0 100 100" fill="none" aria-hidden="true">
-          {/* Coin stack illustration */}
           <ellipse cx="50" cy="72" rx="30" ry="10" fill="#feb704" stroke="#111008" strokeWidth="2.5" />
           <rect x="20" y="55" width="60" height="17" rx="4" fill="#feb704" stroke="#111008" strokeWidth="2.5" />
           <ellipse cx="50" cy="55" rx="30" ry="10" fill="#fcfaeb" stroke="#111008" strokeWidth="2.5" />
@@ -72,25 +62,23 @@ export default function HomePage() {
       {/* CTA */}
       <Link
         href="/dashboard"
-        className="w-full max-w-[300px] py-3 text-center text-[14px] font-[700] text-[#111008] rounded-[8px] border-2 border-[#111008] shadow-[3px_3px_0_#111008] transition-all duration-150 hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_#111008] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_#111008]"
-        style={{ backgroundColor: "#2ad2a3", fontFamily: "'Space Grotesk', sans-serif" }}
+        className="font-body w-full max-w-[300px] py-3 text-center text-[14px] font-[700] text-ink rounded-btn border-2 border-ink bg-income shadow-neo-sm transition-all duration-150 hover:-translate-x-px hover:-translate-y-px hover:shadow-neo-md active:translate-x-0.5 active:translate-y-0.5 active:shadow-neo-pressed"
       >
         Get Started
       </Link>
 
       <Link
         href="/dashboard"
-        className="mt-4 text-[12px] text-[#e0ccff] underline underline-offset-2"
-        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        className="font-body mt-4 text-[12px] text-primary-muted underline underline-offset-2"
       >
         I already have an account
       </Link>
 
       {/* Progress dots */}
       <div className="flex gap-2 mt-10">
-        <span className="w-2 h-2 rounded-full bg-[#111008]" />
-        <span className="w-2 h-2 rounded-full bg-[#e0ccff]" />
-        <span className="w-2 h-2 rounded-full bg-[#e0ccff]" />
+        <span className="w-2 h-2 rounded-full bg-ink" />
+        <span className="w-2 h-2 rounded-full bg-primary-muted" />
+        <span className="w-2 h-2 rounded-full bg-primary-muted" />
       </div>
     </main>
   );

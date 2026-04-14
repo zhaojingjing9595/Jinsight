@@ -28,7 +28,6 @@ export default function LogContributionPage() {
   const selectedTarget = ALL_TARGETS.find((t) => t.id === targetId)!;
 
   function handleSave() {
-    // TODO: wire to API
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -38,71 +37,57 @@ export default function LogContributionPage() {
   }
 
   return (
-    <div
-      className="flex flex-col max-w-[480px] mx-auto bg-[#fcfaeb]"
-      style={{ height: "100dvh" }}
-    >
+    <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
       {/* ── Top bar ── */}
       <div className="flex-none px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <Link href="/add/investment" className="text-[13px] font-bold text-[#888]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <Link href="/add/investment" className="font-body text-[13px] font-bold text-muted">
             ← Investment
           </Link>
-          <h1 className="text-[11px] font-black uppercase tracking-[3px] text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="font-body text-[11px] font-black uppercase tracking-[3px] text-ink">
             Log Contribution
           </h1>
         </div>
       </div>
 
       {/* ── Form ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Target selector */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-2 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
             Toward
           </label>
           <div className="flex flex-col gap-2">
             {/* Holdings group */}
-            <p className="text-[9px] font-bold uppercase tracking-[2px] text-[#888]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Holdings</p>
+            <p className="font-body text-[9px] font-bold uppercase tracking-[2px] text-muted">Holdings</p>
             {MOCK_HOLDINGS.map((h) => (
               <button
                 key={h.id}
                 type="button"
                 onClick={() => setTargetId(h.id)}
-                className="flex items-center gap-3 px-3 py-2.5 border-[2px] rounded-[10px] text-left transition-all"
-                style={{
-                  borderColor: "#111008",
-                  backgroundColor: targetId === h.id ? "#feb704" : "#fcfaeb",
-                  boxShadow: targetId === h.id ? "2px 2px 0 #111008" : "none",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                }}
+                className={`font-body flex items-center gap-3 px-3 py-2.5 border-2 border-ink rounded-[10px] text-left transition-all ${
+                  targetId === h.id ? "bg-reward shadow-neo-xs" : "bg-base shadow-none"
+                }`}
               >
                 <span className="text-[20px]">{h.icon}</span>
-                <span className="text-[13px] font-bold text-[#111008]">{h.label}</span>
-                {targetId === h.id && <span className="ml-auto text-[#111008] font-black">✓</span>}
+                <span className="text-[13px] font-bold text-ink">{h.label}</span>
+                {targetId === h.id && <span className="ml-auto text-ink font-black">✓</span>}
               </button>
             ))}
             {/* Goals group */}
-            <p className="text-[9px] font-bold uppercase tracking-[2px] text-[#888] mt-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Goals</p>
+            <p className="font-body text-[9px] font-bold uppercase tracking-[2px] text-muted mt-1">Goals</p>
             {MOCK_GOALS.map((g) => (
               <button
                 key={g.id}
                 type="button"
                 onClick={() => setTargetId(g.id)}
-                className="flex items-center gap-3 px-3 py-2.5 border-[2px] rounded-[10px] text-left transition-all"
-                style={{
-                  borderColor: "#111008",
-                  backgroundColor: targetId === g.id ? "#cce972" : "#fcfaeb",
-                  boxShadow: targetId === g.id ? "2px 2px 0 #111008" : "none",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                }}
+                className={`font-body flex items-center gap-3 px-3 py-2.5 border-2 border-ink rounded-[10px] text-left transition-all ${
+                  targetId === g.id ? "bg-goal shadow-neo-xs" : "bg-base shadow-none"
+                }`}
               >
                 <span className="text-[20px]">{g.icon}</span>
-                <span className="text-[13px] font-bold text-[#111008]">{g.label}</span>
-                {targetId === g.id && <span className="ml-auto text-[#111008] font-black">✓</span>}
+                <span className="text-[13px] font-bold text-ink">{g.label}</span>
+                {targetId === g.id && <span className="ml-auto text-ink font-black">✓</span>}
               </button>
             ))}
           </div>
@@ -110,20 +95,14 @@ export default function LogContributionPage() {
 
         {/* Amount */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Amount
           </label>
-          <div
-            className="border-[2.5px] border-[#111008] rounded-[14px] flex flex-col items-center justify-center py-3 mb-3"
-            style={{ boxShadow: "4px 4px 0 #111008", backgroundColor: "#fff9e6" }}
-          >
-            <p
-              className="font-black leading-none text-[#111008]"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "clamp(32px, 7vw, 44px)" }}
-            >
+          <div className="border-[2.5px] border-ink rounded-card flex flex-col items-center justify-center py-3 mb-3 shadow-neo-md bg-[#fff9e6]">
+            <p className="font-display font-black leading-none text-ink text-[clamp(32px,7vw,44px)]">
               ₪{amountNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[9px] text-[#888] mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="font-body text-[9px] text-muted mt-0.5">
               {selectedTarget.icon} → {selectedTarget.label}
             </p>
           </div>
@@ -132,30 +111,28 @@ export default function LogContributionPage() {
 
         {/* Date */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Date
           </label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Notes */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Notes <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+            Notes <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. Monthly auto-invest"
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
           />
         </div>
 
@@ -164,13 +141,9 @@ export default function LogContributionPage() {
           type="button"
           onClick={handleSave}
           disabled={amountNum === 0}
-          className="w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-[#111008] rounded-[10px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: saved ? "#cce972" : "#2ad2a3",
-            color: "#111008",
-            boxShadow: "4px 4px 0 #111008",
-          }}
+          className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md text-ink transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
+            saved ? "bg-goal" : "bg-income"
+          }`}
         >
           {saved ? "✓ Logged!" : "Log Contribution"}
         </button>

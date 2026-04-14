@@ -38,14 +38,9 @@ export function NumPad({ value, onChange }: NumPadProps) {
           key={key}
           type="button"
           onClick={() => handleKey(key)}
-          className="flex items-center justify-center font-bold text-[20px] border-[2px] border-[#111008] rounded-[10px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
-          style={{
-            height: "56px",
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: key === "⌫" ? "#fc524f" : "#fcfaeb",
-            color: key === "⌫" ? "#ffffff" : "#111008",
-            boxShadow: "2px 2px 0 #111008",
-          }}
+          className={`font-body flex items-center justify-center h-14 font-bold text-[20px] border-2 border-ink rounded-[10px] shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all ${
+            key === "⌫" ? "bg-alert text-white" : "bg-base text-ink"
+          }`}
         >
           {key}
         </button>

@@ -150,8 +150,7 @@ const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amou
 export default function DashboardPage() {
   return (
     <div
-      className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base"
-      style={{ height: "100dvh" }}
+      className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh"
     >
       {/* ── Section 1: Balance hero (~18 dvh) ── */}
       <div
@@ -159,16 +158,16 @@ export default function DashboardPage() {
         style={{ flex: "0 0 18dvh" }}
       >
         <div className="flex-1 border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 flex flex-col items-center justify-center text-center bg-reward">
-          <p className="text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
+          <p className="font-body text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
             April 2026 · Current Balance
           </p>
           <h1
-            className="font-medium leading-none text-ink"
-            style={{ fontSize: "clamp(34px, 5.5dvh, 56px)", letterSpacing: "0.01em" }}
+            className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+            style={{ fontSize: "clamp(34px, 5.5dvh, 56px)" }}
           >
             {formatCurrency(balance, "ILS")}
           </h1>
-          <p className="text-[10px] font-medium mt-1 text-reward-dark">
+          <p className="font-body text-[10px] font-medium mt-1 text-reward-dark">
             Income minus spending this month
           </p>
         </div>
@@ -183,23 +182,23 @@ export default function DashboardPage() {
           {/* Amount labels */}
           <div className="flex justify-between items-end">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
+              <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
                 Spent
               </p>
               <p
-                className="font-medium leading-none text-ink"
-                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)", letterSpacing: "0.01em" }}
+                className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
               >
                 {formatCurrency(totalExpenses, "ILS")}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[9px] font-bold uppercase tracking-[1.5px] text-income">
+              <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-income">
                 Income
               </p>
               <p
-                className="font-medium leading-none text-ink"
-                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)", letterSpacing: "0.01em" }}
+                className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
               >
                 {formatCurrency(totalIncome, "ILS")}
               </p>
@@ -219,7 +218,7 @@ export default function DashboardPage() {
               />
             </div>
             <div className="flex justify-end mt-1">
-              <span className="text-[9px] font-semibold text-income-dark">
+              <span className="font-body text-[9px] font-semibold text-income-dark">
                 {formatCurrency(totalIncome - totalExpenses, "ILS")} left
               </span>
             </div>
@@ -228,16 +227,13 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Section 3: Charts + transaction history (scrollable) ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(80px+16px)]">
         {/* Chart card */}
         <div
           className="border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
           style={{ height: "clamp(220px, 38dvh, 320px)" }}
         >
-          <h2 className="flex-none text-[12px] font-black uppercase tracking-[1.5px] text-ink mb-1">
+          <h2 className="font-body flex-none text-[12px] font-black uppercase tracking-[1.5px] text-ink mb-1">
             Where It Went
           </h2>
           <div className="flex-1 min-h-0">

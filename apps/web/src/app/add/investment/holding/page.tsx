@@ -31,7 +31,6 @@ export default function AddHoldingPage() {
   const costBasis = priceNum * unitsNum;
 
   function handleSave() {
-    // TODO: wire to API
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -40,17 +39,14 @@ export default function AddHoldingPage() {
   }
 
   return (
-    <div
-      className="flex flex-col max-w-[480px] mx-auto bg-[#fcfaeb]"
-      style={{ height: "100dvh" }}
-    >
+    <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
       {/* ── Top bar ── */}
       <div className="flex-none px-4 pt-6 pb-3">
         <div className="flex items-center gap-3 mb-3">
-          <Link href="/add/investment" className="text-[13px] font-bold text-[#888]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <Link href="/add/investment" className="font-body text-[13px] font-bold text-muted">
             ← Investment
           </Link>
-          <h1 className="text-[11px] font-black uppercase tracking-[3px] text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h1 className="font-body text-[11px] font-black uppercase tracking-[3px] text-ink">
             Add Holding
           </h1>
         </div>
@@ -63,14 +59,10 @@ export default function AddHoldingPage() {
                 key={at.value}
                 type="button"
                 onClick={() => setAssetType(at.value)}
-                className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-[20px] border-[2px] text-[11px] font-bold uppercase tracking-[0.5px] transition-all"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  borderColor: "#111008",
-                  backgroundColor: isActive ? at.color : "#fcfaeb",
-                  color: isActive ? "#111008" : "#888",
-                  boxShadow: isActive ? "2px 2px 0 #111008" : "none",
-                }}
+                className={`font-body flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-pill border-2 border-ink text-[11px] font-bold uppercase tracking-[0.5px] transition-all ${
+                  isActive ? "text-ink shadow-neo-xs" : "bg-base text-muted shadow-none"
+                }`}
+                style={isActive ? { backgroundColor: at.color } : undefined}
               >
                 {at.icon} {at.label}
               </button>
@@ -80,13 +72,10 @@ export default function AddHoldingPage() {
       </div>
 
       {/* ── Form ── */}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
-        style={{ paddingBottom: "calc(80px + 16px)" }}
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
         {/* Name */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Asset Name
           </label>
           <input
@@ -94,24 +83,22 @@ export default function AddHoldingPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={assetType === "crypto" ? "e.g. Bitcoin" : assetType === "stock" ? "e.g. Apple Inc." : "Name"}
-            className="w-full px-3 py-2.5 text-[14px] font-bold border-[2px] border-[#111008] rounded-[10px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee] focus:shadow-[2px_2px_0_#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif", boxShadow: "2px 2px 0 #111008" }}
+            className="font-body w-full px-3 py-2.5 text-[14px] font-bold border-2 border-ink rounded-[10px] bg-base shadow-neo-xs focus:outline-none focus:border-primary focus:shadow-[2px_2px_0_#a57dee]"
           />
         </div>
 
         {/* Ticker (optional for non-real-estate) */}
         {assetType !== "real_estate" && assetType !== "other" && (
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Ticker / Symbol <span className="font-normal text-[#888]">(optional)</span>
+            <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+              Ticker / Symbol <span className="font-normal text-muted">(optional)</span>
             </label>
             <input
               type="text"
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
               placeholder={assetType === "crypto" ? "BTC" : "AAPL"}
-              className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
             />
           </div>
         )}
@@ -119,7 +106,7 @@ export default function AddHoldingPage() {
         {/* Units + Price per unit */}
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
               {assetType === "real_estate" ? "% Owned" : "Units / Shares"}
             </label>
             <input
@@ -129,23 +116,19 @@ export default function AddHoldingPage() {
               value={units}
               onChange={(e) => setUnits(e.target.value)}
               placeholder="0"
-              className="w-full px-3 py-2 text-[13px] font-bold border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              className="font-body w-full px-3 py-2 text-[13px] font-bold border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
               {assetType === "real_estate" ? "Property Value" : "Price per Unit"}
             </label>
             <button
               type="button"
               onClick={() => setEditingPrice((v) => !v)}
-              className="w-full px-3 py-2 text-[13px] font-bold border-[2px] border-[#111008] rounded-[8px] text-left transition-all"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                backgroundColor: editingPrice ? "#fff9e6" : "#fcfaeb",
-                boxShadow: "2px 2px 0 #111008",
-              }}
+              className={`font-body w-full px-3 py-2 text-[13px] font-bold border-2 border-ink rounded-btn text-left shadow-neo-xs transition-all ${
+                editingPrice ? "bg-[#fff9e6]" : "bg-base"
+              }`}
             >
               ₪ {priceNum.toLocaleString() || "0"}
             </button>
@@ -158,17 +141,11 @@ export default function AddHoldingPage() {
 
         {/* Cost basis summary */}
         {costBasis > 0 && (
-          <div
-            className="flex justify-between items-center px-4 py-2.5 border-[2px] border-[#111008] rounded-[10px]"
-            style={{ backgroundColor: "#feb704", boxShadow: "2px 2px 0 #111008" }}
-          >
-            <span className="text-[11px] font-bold uppercase tracking-[1px] text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div className="flex justify-between items-center px-4 py-2.5 border-2 border-ink rounded-[10px] bg-reward shadow-neo-xs">
+            <span className="font-body text-[11px] font-bold uppercase tracking-[1px] text-ink">
               Cost Basis
             </span>
-            <span
-              className="font-black text-[#111008]"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "22px" }}
-            >
+            <span className="font-display font-black text-ink text-[22px]">
               ₪{costBasis.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -176,30 +153,28 @@ export default function AddHoldingPage() {
 
         {/* Purchase date */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
             Purchase Date
           </label>
           <input
             type="date"
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Platform */}
         <div>
-          <label className="block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-[#111008]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Platform / Broker <span className="font-normal text-[#888]">(optional)</span>
+          <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+            Platform / Broker <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             type="text"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
             placeholder="e.g. Interactive Brokers, Coinbase…"
-            className="w-full px-3 py-2 text-[13px] border-[2px] border-[#111008] rounded-[8px] bg-[#fcfaeb] focus:outline-none focus:border-[#a57dee]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
           />
         </div>
 
@@ -208,13 +183,9 @@ export default function AddHoldingPage() {
           type="button"
           onClick={handleSave}
           disabled={!name || unitsNum === 0 || priceNum === 0}
-          className="w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-[#111008] rounded-[10px] transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            backgroundColor: saved ? "#cce972" : "#feb704",
-            color: "#111008",
-            boxShadow: "4px 4px 0 #111008",
-          }}
+          className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md text-ink transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
+            saved ? "bg-goal" : "bg-reward"
+          }`}
         >
           {saved ? "✓ Holding Added!" : "Add Holding"}
         </button>

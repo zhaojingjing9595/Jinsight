@@ -12,10 +12,7 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
 
   return (
     <div className="mt-3 pb-1">
-      <h3
-        className="text-[12px] font-[900] uppercase tracking-[1.5px] text-[#111008] mb-2"
-        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-      >
+      <h3 className="font-body text-[12px] font-[900] uppercase tracking-[1.5px] text-ink mb-2">
         Transactions
       </h3>
 
@@ -27,55 +24,32 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
           return (
             <div
               key={t.id}
-              className="flex items-center gap-3 border-[2px] border-[#111008] rounded-[12px] shadow-[3px_3px_0_#111008] px-3 py-2"
-              style={{ backgroundColor: "#fcfaeb" }}
+              className="flex items-center gap-3 border-2 border-ink rounded-[12px] shadow-neo-sm px-3 py-2 bg-base"
             >
               {/* Icon + category label */}
               <div className="flex-none flex flex-col items-center w-10">
                 <div
-                  className="w-9 h-9 rounded-[10px] border-[2px] border-[#111008] flex items-center justify-center text-lg leading-none"
+                  className="w-9 h-9 rounded-[10px] border-2 border-ink flex items-center justify-center text-lg leading-none"
                   style={{ backgroundColor: meta.color }}
                 >
                   {meta.icon}
                 </div>
-                <span
-                  className="mt-0.5 text-center leading-tight"
-                  style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: "8px",
-                    fontWeight: 600,
-                    color: "#666",
-                    maxWidth: "40px",
-                    overflowWrap: "break-word",
-                  }}
-                >
+                <span className="font-body mt-0.5 text-center leading-tight text-[8px] font-semibold text-[#666] max-w-[40px] break-words">
                   {meta.label}
                 </span>
               </div>
 
               {/* Description */}
-              <p
-                className="flex-1 min-w-0 truncate text-[13px] font-[600] text-[#111008]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
+              <p className="font-body flex-1 min-w-0 truncate text-[13px] font-[600] text-ink">
                 {t.description ?? meta.label}
               </p>
 
               {/* Amount + datetime */}
               <div className="flex-none text-right">
-                <p
-                  className="text-[14px] font-[700] leading-tight"
-                  style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    color: isExpense ? "#fc524f" : "#2ad2a3",
-                  }}
-                >
+                <p className={`font-body text-[14px] font-[700] leading-tight ${isExpense ? "text-alert" : "text-income"}`}>
                   {isExpense ? "−" : "+"}{formatCurrency(t.amount, "ILS")}
                 </p>
-                <p
-                  className="mt-0.5 text-[9px] font-[500]"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#999" }}
-                >
+                <p className="font-body mt-0.5 text-[9px] font-[500] text-[#999]">
                   {formatDateTime(t.date)}
                 </p>
               </div>
