@@ -1,18 +1,42 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
 
 export const accountsRouter = router({
-  list: protectedProcedure.query(async () => {
-    // TODO: implement with Prisma
-    // return accounts owned by ctx.userId + accounts where userId is an AccountMember
-    return { accounts: [] };
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const accounts = await ctx.prisma.account.findMany({
+      where: {
+        OR: [
+          { userId: ctx.userId },
+          { members: { some: { userId: ctx.userId } } },
+        ],
+      },
+      include: { members: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return { accounts };
   }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { account: null };
+    .query(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findUnique({
+        where: { id: input.id },
+        include: { members: true, transactions: { take: 20, orderBy: { date: "desc" } } },
+      });
+
+      if (!account) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });
+      }
+
+      const isOwner = account.userId === ctx.userId;
+      const isMember = account.members.some((m) => m.userId === ctx.userId);
+      if (!isOwner && !isMember) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+      }
+
+      return { account };
     }),
 
   create: protectedProcedure
@@ -23,9 +47,17 @@ export const accountsRouter = router({
         balance: z.number().default(0),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { id: "placeholder", ...input };
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.create({
+        data: {
+          userId: ctx.userId,
+          name: input.name,
+          type: input.type,
+          balance: input.balance,
+        },
+      });
+
+      return { account };
     }),
 
   update: protectedProcedure
@@ -36,15 +68,30 @@ export const accountsRouter = router({
         balance: z.number().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { id: input.id };
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.account.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+      }
+
+      const { id, ...data } = input;
+      const account = await ctx.prisma.account.update({
+        where: { id },
+        data,
+      });
+
+      return { account };
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.account.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+      }
+
+      await ctx.prisma.account.delete({ where: { id: input.id } });
       return { deleted: input.id };
     }),
 
@@ -55,9 +102,17 @@ export const accountsRouter = router({
         userId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { accountId: input.accountId, userId: input.userId };
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findUnique({ where: { id: input.accountId } });
+      if (!account || account.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only the owner can add members" });
+      }
+
+      const member = await ctx.prisma.accountMember.create({
+        data: { accountId: input.accountId, userId: input.userId },
+      });
+
+      return { member };
     }),
 
   removeMember: protectedProcedure
@@ -67,8 +122,16 @@ export const accountsRouter = router({
         userId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findUnique({ where: { id: input.accountId } });
+      if (!account || account.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only the owner can remove members" });
+      }
+
+      await ctx.prisma.accountMember.delete({
+        where: { accountId_userId: { accountId: input.accountId, userId: input.userId } },
+      });
+
       return { removed: true };
     }),
 });

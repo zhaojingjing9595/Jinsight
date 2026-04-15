@@ -61,14 +61,14 @@ export default function HomePage() {
 
       {/* CTA */}
       <Link
-        href="/dashboard"
+        href="/signup"
         className="font-body w-full max-w-[300px] py-3 text-center text-[14px] font-[700] text-ink rounded-btn border-2 border-ink bg-income shadow-neo-sm transition-all duration-150 hover:-translate-x-px hover:-translate-y-px hover:shadow-neo-md active:translate-x-0.5 active:translate-y-0.5 active:shadow-neo-pressed"
       >
         Get Started
       </Link>
 
       <Link
-        href="/dashboard"
+        href="/login"
         className="font-body mt-4 text-[12px] text-primary-muted underline underline-offset-2"
       >
         I already have an account

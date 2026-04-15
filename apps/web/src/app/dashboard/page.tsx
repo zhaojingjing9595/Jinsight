@@ -1,171 +1,126 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import type { MonthData } from "@/components/MonthlyBarChart";
+import { trpcQuery } from "@/lib/api";
 
-// ─── Mock data (Phase 1 — replaced with real data in Phase 2) ────────────────
+type ApiTransaction = {
+  id: string;
+  accountId: string;
+  amount: number;
+  type: "INCOME" | "EXPENSE";
+  category: string;
+  description: string | null;
+  date: string;
+  isRecurring: boolean;
+  createdAt: string;
+};
 
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    accountId: "acc1",
-    amount: 8500,
-    type: "INCOME",
-    category: "salary",
-    description: "Monthly salary",
-    date: new Date("2026-04-01T09:00:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-01"),
-  },
-  {
-    id: "2",
-    accountId: "acc1",
-    amount: 2200,
-    type: "EXPENSE",
-    category: "rent",
-    description: "April rent",
-    date: new Date("2026-04-01T10:30:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-01"),
-  },
-  {
-    id: "3",
-    accountId: "acc1",
-    amount: 150,
-    type: "EXPENSE",
-    category: "utilities",
-    description: "Electricity & Internet",
-    date: new Date("2026-04-03T08:00:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-03"),
-  },
-  {
-    id: "4",
-    accountId: "acc1",
-    amount: 49,
-    type: "EXPENSE",
-    category: "subscriptions",
-    description: "Spotify + Netflix",
-    date: new Date("2026-04-04T12:00:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-04"),
-  },
-  {
-    id: "5",
-    accountId: "acc1",
-    amount: 320,
-    type: "EXPENSE",
-    category: "grocery",
-    description: "Weekly groceries",
-    date: new Date("2026-04-06T17:30:00"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-06"),
-  },
-  {
-    id: "6",
-    accountId: "acc1",
-    amount: 180,
-    type: "EXPENSE",
-    category: "dining",
-    description: "Dinner at Oasis",
-    date: new Date("2026-04-05T19:45:00"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-05"),
-  },
-  {
-    id: "7",
-    accountId: "acc1",
-    amount: 150,
-    type: "EXPENSE",
-    category: "shopping",
-    description: "New sneakers",
-    date: new Date("2026-04-07T14:30:00"),
-    isRecurring: false,
-    createdAt: new Date("2026-04-07"),
-  },
-  {
-    id: "8",
-    accountId: "acc1",
-    amount: 65,
-    type: "EXPENSE",
-    category: "transport",
-    description: "Monthly transit pass",
-    date: new Date("2026-04-03T09:00:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-03"),
-  },
-  {
-    id: "9",
-    accountId: "acc1",
-    amount: 45,
-    type: "EXPENSE",
-    category: "other",
-    description: "Monthly gym membership",
-    date: new Date("2026-04-02T07:00:00"),
-    isRecurring: true,
-    createdAt: new Date("2026-04-02"),
-  },
-];
+function toTransaction(t: ApiTransaction): Transaction {
+  return {
+    ...t,
+    category: t.category as Transaction["category"],
+    date: new Date(t.date),
+    createdAt: new Date(t.createdAt),
+  };
+}
 
-// Last 6 months of income vs. spending (Nov 2025 – Apr 2026)
-const MONTHLY_DATA: MonthData[] = [
-  { month: "Nov", income: 8200, spent: 7800 },
-  { month: "Dec", income: 8200, spent: 9200 },
-  { month: "Jan", income: 8500, spent: 6500 },
-  { month: "Feb", income: 8500, spent: 7100 },
-  { month: "Mar", income: 8500, spent: 8600 },
-  { month: "Apr", income: 8500, spent: 3159 },
-];
-
-// ─── Derived values ───────────────────────────────────────────────────────────
-
-const totalIncome = MOCK_TRANSACTIONS.filter((t) => t.type === "INCOME").reduce(
-  (sum, t) => sum + t.amount,
-  0,
-);
-const totalExpenses = MOCK_TRANSACTIONS.filter((t) => t.type === "EXPENSE").reduce(
-  (sum, t) => sum + t.amount,
-  0,
-);
-const balance = totalIncome - totalExpenses;
-const spentRatio = Math.min((totalExpenses / totalIncome) * 100, 100);
-
-const categoryTotals = MOCK_TRANSACTIONS.filter((t) => t.type === "EXPENSE").reduce<
-  Record<string, { amount: number; color: string; label: string }>
->((acc, t) => {
-  const meta = CATEGORY_META[t.category];
-  if (!acc[t.category]) {
-    acc[t.category] = { amount: 0, color: meta.color, label: meta.label };
-  }
-  acc[t.category].amount += t.amount;
-  return acc;
-}, {});
-
-const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount);
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+const currentYear = now.getFullYear();
+const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
 export default function DashboardPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [monthlyData] = useState<MonthData[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const me = await trpcQuery<{
+          user: { accounts: { id: string; balance: number }[] };
+        }>("users.me");
+
+        if (!me.user.accounts?.length) {
+          setLoading(false);
+          return;
+        }
+
+        const account = me.user.accounts[0];
+        setBalance(account.balance);
+
+        const txData = await trpcQuery<{ transactions: ApiTransaction[] }>(
+          "transactions.list",
+          {
+            accountId: account.id,
+            month: currentMonth,
+            year: currentYear,
+            limit: 50,
+          },
+        );
+
+        setTransactions(txData.transactions.map(toTransaction));
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, []);
+
+  const totalIncome = transactions
+    .filter((t) => t.type === "INCOME")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = transactions
+    .filter((t) => t.type === "EXPENSE")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const monthBalance = totalIncome - totalExpenses;
+  const spentRatio = totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0;
+
+  const categoryTotals = transactions
+    .filter((t) => t.type === "EXPENSE")
+    .reduce<Record<string, { amount: number; color: string; label: string }>>((acc, t) => {
+      const meta = CATEGORY_META[t.category] ?? { color: "#d4d4d4", label: t.category };
+      if (!acc[t.category]) {
+        acc[t.category] = { amount: 0, color: meta.color, label: meta.label };
+      }
+      acc[t.category].amount += t.amount;
+      return acc;
+    }, {});
+
+  const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center max-w-[480px] mx-auto bg-base h-dvh">
+        <div className="w-8 h-8 border-[3px] border-ink border-t-primary rounded-full animate-spin" />
+        <p className="font-body text-[12px] text-muted mt-3">Loading your finances...</p>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh"
-    >
+    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh">
       {/* ── Section 1: Balance hero (~18 dvh) ── */}
-      <div
-        className="min-h-0 flex flex-col pt-8 pb-3"
-        style={{ flex: "0 0 18dvh" }}
-      >
+      <div className="min-h-0 flex flex-col pt-8 pb-3" style={{ flex: "0 0 18dvh" }}>
         <div className="flex-1 border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 flex flex-col items-center justify-center text-center bg-reward">
           <p className="font-body text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
-            April 2026 · Current Balance
+            {monthLabel} · Current Balance
           </p>
           <h1
             className="font-display font-medium leading-none text-ink tracking-[0.01em]"
             style={{ fontSize: "clamp(34px, 5.5dvh, 56px)" }}
           >
-            {formatCurrency(balance, "ILS")}
+            {formatCurrency(monthBalance, "ILS")}
           </h1>
           <p className="font-body text-[10px] font-medium mt-1 text-reward-dark">
             Income minus spending this month
@@ -174,12 +129,8 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Section 2: Income vs Spent bar (~15 dvh) ── */}
-      <div
-        className="min-h-0 flex flex-col pb-3"
-        style={{ flex: "0 0 15dvh" }}
-      >
+      <div className="min-h-0 flex flex-col pb-3" style={{ flex: "0 0 15dvh" }}>
         <div className="flex-1 border-[2.5px] border-ink rounded-card shadow-neo-md px-4 flex flex-col justify-center gap-2 bg-base">
-          {/* Amount labels */}
           <div className="flex justify-between items-end">
             <div>
               <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
@@ -205,7 +156,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Single combined bar */}
           <div>
             <div className="h-[20px] rounded-[30px] border-[2px] border-ink overflow-hidden relative bg-income">
               <div
@@ -228,7 +178,6 @@ export default function DashboardPage() {
 
       {/* ── Section 3: Charts + transaction history (scrollable) ── */}
       <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(80px+16px)]">
-        {/* Chart card */}
         <div
           className="border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
           style={{ height: "clamp(220px, 38dvh, 320px)" }}
@@ -240,13 +189,12 @@ export default function DashboardPage() {
             <ChartSection
               slices={pieSlices}
               totalLabel={formatCurrency(totalExpenses, "ILS")}
-              monthlyData={MONTHLY_DATA}
+              monthlyData={monthlyData}
             />
           </div>
         </div>
 
-        {/* Transaction history list */}
-        <TransactionHistory transactions={MOCK_TRANSACTIONS} />
+        <TransactionHistory transactions={transactions} />
       </div>
 
       <BottomNav active="home" />

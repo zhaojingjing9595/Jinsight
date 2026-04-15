@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
 
 export const billsRouter = router({
@@ -8,16 +9,28 @@ export const billsRouter = router({
         isPaid: z.boolean().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { bills: [], input };
+    .query(async ({ ctx, input }) => {
+      const bills = await ctx.prisma.bill.findMany({
+        where: {
+          userId: ctx.userId,
+          ...(input.isPaid !== undefined && { isPaid: input.isPaid }),
+        },
+        orderBy: { dueDate: "asc" },
+      });
+
+      return { bills };
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { bill: null, id: input.id };
+    .query(async ({ ctx, input }) => {
+      const bill = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
+
+      if (!bill || bill.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Bill not found" });
+      }
+
+      return { bill };
     }),
 
   create: protectedProcedure
@@ -29,9 +42,18 @@ export const billsRouter = router({
         isRecurring: z.boolean().default(false),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { id: "placeholder", ...input };
+    .mutation(async ({ ctx, input }) => {
+      const bill = await ctx.prisma.bill.create({
+        data: {
+          userId: ctx.userId,
+          name: input.name,
+          amount: input.amount,
+          dueDate: new Date(input.dueDate),
+          isRecurring: input.isRecurring,
+        },
+      });
+
+      return { bill };
     }),
 
   update: protectedProcedure
@@ -45,15 +67,33 @@ export const billsRouter = router({
         isPaid: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
-      return { id: input.id };
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
+      }
+
+      const { id, dueDate, ...rest } = input;
+      const bill = await ctx.prisma.bill.update({
+        where: { id },
+        data: {
+          ...rest,
+          ...(dueDate && { dueDate: new Date(dueDate) }),
+        },
+      });
+
+      return { bill };
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
-      // TODO: implement with Prisma
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
+      }
+
+      await ctx.prisma.bill.delete({ where: { id: input.id } });
       return { deleted: input.id };
     }),
 });

@@ -7,13 +7,13 @@ import { NumPad } from "@/components/NumPad";
 
 // Mock data — replace with real holdings/goals from API
 const MOCK_HOLDINGS = [
-  { id: "h1", type: "holding" as const, label: "Apple Inc. (AAPL)", icon: "📈" },
-  { id: "h2", type: "holding" as const, label: "Bitcoin (BTC)",       icon: "₿"  },
-  { id: "h3", type: "holding" as const, label: "S&P 500 ETF (SPY)",   icon: "🗂️" },
+  // { id: "h1", type: "holding" as const, label: "Apple Inc. (AAPL)", icon: "📈" },
+  // { id: "h2", type: "holding" as const, label: "Bitcoin (BTC)",       icon: "₿"  },
+  // { id: "h3", type: "holding" as const, label: "S&P 500 ETF (SPY)",   icon: "🗂️" },
 ];
 const MOCK_GOALS = [
-  { id: "g1", type: "goal" as const, label: "House Down Payment", icon: "🏠" },
-  { id: "g2", type: "goal" as const, label: "Retirement Fund",    icon: "🌅" },
+  // { id: "g1", type: "goal" as const, label: "House Down Payment", icon: "🏠" },
+  // { id: "g2", type: "goal" as const, label: "Retirement Fund",    icon: "🌅" },
 ];
 const ALL_TARGETS = [...MOCK_HOLDINGS, ...MOCK_GOALS];
 

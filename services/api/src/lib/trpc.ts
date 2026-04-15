@@ -4,6 +4,7 @@ import type { PrismaClient } from "@prisma/client";
 
 export type Context = {
   userId: string | null;
+  userEmail: string | null;
   prisma: PrismaClient;
 };
 

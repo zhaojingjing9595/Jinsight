@@ -20,7 +20,7 @@ export const authRouter = router({
         update: {},
         create: {
           id: ctx.userId,
-          email: "", // populated by a follow-up users.update or from Supabase profile
+          email: ctx.userEmail ?? "",
           name: input.name,
           currency: input.currency,
           accounts: {

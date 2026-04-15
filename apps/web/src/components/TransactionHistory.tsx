@@ -8,7 +8,11 @@ function formatDateTime(date: Date) {
 }
 
 export function TransactionHistory({ transactions }: { transactions: Transaction[] }) {
-  const sorted = [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const sorted = [...transactions].sort(
+    (a, b) =>
+      b.date.getTime() - a.date.getTime() ||
+      b.createdAt.getTime() - a.createdAt.getTime(),
+  );
 
   return (
     <div className="mt-3 pb-1">

@@ -22,17 +22,17 @@ await server.register(fastifyTRPCPlugin, {
     createContext: async ({ req }): Promise<Context> => {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith("Bearer ")) {
-        return { userId: null, prisma };
+        return { userId: null, userEmail: null, prisma };
       }
 
       const token = authHeader.slice(7);
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
       if (error || !user) {
-        return { userId: null, prisma };
+        return { userId: null, userEmail: null, prisma };
       }
 
-      return { userId: user.id, prisma };
+      return { userId: user.id, userEmail: user.email ?? null, prisma };
     },
   },
 });

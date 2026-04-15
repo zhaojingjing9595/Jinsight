@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@jinsight/core";
 import type { Category, TransactionType } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,10 +9,10 @@ import { AddSwitcher } from "@/components/AddSwitcher";
 import { NumPad } from "@/components/NumPad";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { TypeToggle } from "@/components/TypeToggle";
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import { trpcQuery, trpcMutate } from "@/lib/api";
 
 export default function AddPage() {
+  const router = useRouter();
   const [type, setType] = useState<TransactionType>("EXPENSE");
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState<Category | null>(null);
@@ -20,19 +21,51 @@ export default function AddPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [isRecurring, setIsRecurring] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
+
+  useEffect(() => {
+    trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me")
+      .then((data) => setAccountId(data.user.accounts?.[0]?.id ?? null))
+      .catch(console.error);
+  }, []);
 
   const displayAmount = formatCurrency(parseFloat(amount) || 0, "ILS");
   const isExpense = type === "EXPENSE";
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setAmount("0");
-      setCategory(null);
-      setName("");
-      setIsRecurring(false);
-    }, 1500);
+  async function handleSave() {
+    if (!accountId || saving) return;
+
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await trpcMutate("transactions.create", {
+        accountId,
+        amount: parseFloat(amount),
+        type,
+        category: category ?? "other",
+        description: name || undefined,
+        date: new Date(date).toISOString(),
+        isRecurring,
+      });
+
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        setAmount("0");
+        setCategory(null);
+        setName("");
+        setIsRecurring(false);
+        router.refresh();
+      }, 1200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSaveError(message);
+      console.error("Failed to save transaction:", err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -41,6 +74,11 @@ export default function AddPage() {
 
       {/* ── Scrollable form body ── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4 pb-[calc(80px+16px)]">
+        {saveError && (
+          <div className="bg-alert/10 border-2 border-alert rounded-btn px-3 py-2 text-[12px] font-body font-[700] text-alert whitespace-pre-wrap">
+            {saveError}
+          </div>
+        )}
         {/* Type toggle */}
         <div className="flex justify-center">
           <TypeToggle value={type} onChange={(t) => { setType(t); setCategory(null); }} />
@@ -103,7 +141,7 @@ export default function AddPage() {
         {!category && name.trim() && (
           <div>
             <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
-              Assign "{name.trim()}" to a category
+              Assign &quot;{name.trim()}&quot; to a category
             </p>
             <CategoryPicker
               value={category}
@@ -168,7 +206,7 @@ export default function AddPage() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={parseFloat(amount) === 0 || (!category && !name.trim())}
+          disabled={parseFloat(amount) === 0 || (!category && !name.trim()) || !accountId || saving}
           className={`font-body w-full py-3 text-[14px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] shadow-neo-md transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none ${
             saved
               ? "bg-goal text-ink"
@@ -177,7 +215,7 @@ export default function AddPage() {
                 : "bg-income text-ink"
           }`}
         >
-          {saved ? "✓ Saved!" : `Save ${isExpense ? "Expense" : "Income"}`}
+          {saved ? "✓ Saved!" : saving ? "Saving..." : `Save ${isExpense ? "Expense" : "Income"}`}
         </button>
       </div>
 
