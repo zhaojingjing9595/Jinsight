@@ -43,22 +43,22 @@ export const CATEGORY_META: Record<Category, CategoryMeta> = {
   subscriptions:     { label: "Subscriptions",  color: "#208870", icon: "📱" },
   grocery:           { label: "Grocery",        color: "#2ad2a3", icon: "🛒" },
   dining:            { label: "Dining Out",     color: "#f5a800", icon: "🍽️" },
-  shopping:          { label: "Shopping",       color: "#feb704", icon: "🛍️" },
+  shopping:          { label: "Shopping",       color: "#ec4899", icon: "🛍️" },
   entertainment:     { label: "Entertainment",  color: "#fdb6f0", icon: "🎉" },
   transport:         { label: "Transportation", color: "#9090cc", icon: "🚌" },
   education:         { label: "Education",      color: "#cce972", icon: "📚" },
-  travel:            { label: "Travel",         color: "#f0c000", icon: "✈️" },
+  travel:            { label: "Travel",         color: "#3b82f6", icon: "✈️" },
   other:             { label: "Others",         color: "#d4d4d4", icon: "📦" },
 
   // ── Income categories ──
-  salary:            { label: "Salary",          color: "#2ad2a3", icon: "💰" },
-  bonus:             { label: "Bonus",           color: "#feb704", icon: "🎁" },
-  freelance:         { label: "Freelance",       color: "#a57dee", icon: "💻" },
-  side_hustle:       { label: "Side Hustle",     color: "#f07030", icon: "🔥" },
-  investment_return: { label: "Investments",     color: "#cce972", icon: "📈" },
-  refund:            { label: "Refund",          color: "#9090cc", icon: "↩️" },
-  gift:              { label: "Gift",            color: "#fdb6f0", icon: "🎀" },
-  other_income:      { label: "Other Income",    color: "#cdb1e7", icon: "💵" },
+  salary:            { label: "Salary",          color: "#22c55e", icon: "💰" },
+  bonus:             { label: "Bonus",           color: "#6366f1", icon: "🎁" },
+  freelance:         { label: "Freelance",       color: "#b45309", icon: "💻" },
+  side_hustle:       { label: "Side Hustle",     color: "#0d9488", icon: "🔥" },
+  investment_return: { label: "Investments",     color: "#84cc16", icon: "📈" },
+  refund:            { label: "Refund",          color: "#06b6d4", icon: "↩️" },
+  gift:              { label: "Gift",            color: "#f472b6", icon: "🎀" },
+  other_income:      { label: "Other Income",    color: "#fb7185", icon: "💵" },
 };
 
 export const CATEGORY_LIST: Category[] = Object.keys(CATEGORY_META) as Category[];

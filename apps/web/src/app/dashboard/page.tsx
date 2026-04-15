@@ -6,8 +6,7 @@ import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
 import { TransactionHistory } from "@/components/TransactionHistory";
-import type { MonthData } from "@/components/MonthlyBarChart";
-import { trpcQuery } from "@/lib/api";
+import { trpcQuery, trpcMutate } from "@/lib/api";
 
 type ApiTransaction = {
   id: string;
@@ -39,7 +38,6 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [monthlyData] = useState<MonthData[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -99,6 +97,14 @@ export default function DashboardPage() {
 
   const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount);
 
+  const monthlyData = [
+    {
+      month: now.toLocaleDateString("en-US", { month: "short" }),
+      income: totalIncome,
+      spent: totalExpenses,
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center max-w-[480px] mx-auto bg-base h-dvh">
@@ -128,9 +134,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 2: Income vs Spent bar (~15 dvh) ── */}
-      <div className="min-h-0 flex flex-col pb-3" style={{ flex: "0 0 15dvh" }}>
-        <div className="flex-1 border-[2.5px] border-ink rounded-card shadow-neo-md px-4 flex flex-col justify-center gap-2 bg-base">
+      {/* ── Section 2: Income vs Spent bar (~12 dvh) ── */}
+      <div className="min-h-0 flex flex-col pb-3" style={{ flex: "0 0 12dvh" }}>
+        <div className="flex-1 border-[2.5px] border-ink rounded-card shadow-neo-md px-4 py-2 flex flex-col justify-center gap-1.5 bg-base">
           <div className="flex justify-between items-end">
             <div>
               <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
@@ -176,25 +182,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 3: Charts + transaction history (scrollable) ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto pb-[calc(80px+16px)]">
-        <div
-          className="border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
-          style={{ height: "clamp(220px, 38dvh, 320px)" }}
-        >
-          <h2 className="font-body flex-none text-[12px] font-black uppercase tracking-[1.5px] text-ink mb-1">
-            Where It Went
-          </h2>
-          <div className="flex-1 min-h-0">
-            <ChartSection
-              slices={pieSlices}
-              totalLabel={formatCurrency(totalExpenses, "ILS")}
-              monthlyData={monthlyData}
-            />
-          </div>
+      {/* ── Section 3: Chart (fixed) ── */}
+      <div
+        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base mb-3"
+        style={{ height: "clamp(220px, 38dvh, 320px)" }}
+      >
+        <div className="flex-1 min-h-0">
+          <ChartSection
+            title="Where It Went"
+            slices={pieSlices}
+            totalLabel={formatCurrency(totalExpenses, "ILS")}
+            monthlyData={monthlyData}
+          />
         </div>
+      </div>
 
-        <TransactionHistory transactions={transactions} />
+      {/* ── Section 4: Transaction history (card scrolls internally) ── */}
+      <div className="flex-1 min-h-0 pb-[calc(80px+16px)]">
+        <TransactionHistory
+          transactions={transactions}
+          onEdit={async (id, patch) => {
+            const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
+              "transactions.update",
+              { id, description: patch.description ?? undefined, amount: patch.amount },
+            );
+            setTransactions((prev) =>
+              prev.map((t) => (t.id === id ? toTransaction(transaction) : t)),
+            );
+          }}
+          onDelete={async (id) => {
+            await trpcMutate("transactions.delete", { id });
+            setTransactions((prev) => prev.filter((t) => t.id !== id));
+          }}
+        />
       </div>
 
       <BottomNav active="home" />

@@ -11,12 +11,59 @@ import { NumPad } from "@/components/NumPad";
 
 // ─── Plan type options ─────────────────────────────────────────────────────────
 
-const PLAN_TYPES: { value: BudgetPlanType; label: string; icon: string }[] = [
-  { value: "trip",         label: "Trip",         icon: "✈️" },
-  { value: "home_project", label: "Home Project", icon: "🏠" },
-  { value: "event",        label: "Event",        icon: "🎉" },
-  { value: "monthly",      label: "Monthly",      icon: "📅" },
-  { value: "custom",       label: "Custom",       icon: "⚙️" },
+const PLAN_TYPES: {
+  value: BudgetPlanType;
+  label: string;
+  color: string;
+  paths: string[];
+}[] = [
+  {
+    value: "trip",
+    label: "Trip",
+    color: "#3b82f6",
+    paths: [
+      "M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z",
+    ],
+  },
+  {
+    value: "home_project",
+    label: "Home Project",
+    color: "#cdb1e7",
+    paths: [
+      "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z",
+      "M9 22V12h6v10",
+    ],
+  },
+  {
+    value: "event",
+    label: "Event",
+    color: "#fdb6f0",
+    paths: [
+      "M9 18V5l12-2v13",
+      "M6 21a3 3 0 100-6 3 3 0 000 6z",
+      "M18 19a3 3 0 100-6 3 3 0 000 6z",
+    ],
+  },
+  {
+    value: "monthly",
+    label: "Monthly",
+    color: "#2ad2a3",
+    paths: [
+      "M3 5h18a1 1 0 011 1v14a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1z",
+      "M2 10h20",
+      "M8 3v4",
+      "M16 3v4",
+    ],
+  },
+  {
+    value: "custom",
+    label: "Custom",
+    color: "#feb704",
+    paths: [
+      "M12 8a4 4 0 100 8 4 4 0 000-8z",
+      "M19.4 13a7.5 7.5 0 000-2l2-1.6-2-3.4-2.4.8a7.5 7.5 0 00-1.7-1L15 3h-6l-.3 2.8a7.5 7.5 0 00-1.7 1l-2.4-.8-2 3.4L4.6 11a7.5 7.5 0 000 2l-2 1.6 2 3.4 2.4-.8c.5.4 1.1.7 1.7 1L9 21h6l.3-2.8c.6-.3 1.2-.6 1.7-1l2.4.8 2-3.4-2-1.6z",
+    ],
+  },
 ];
 
 // Expense categories only (no income)
@@ -78,8 +125,8 @@ export default function BudgetPlanPage() {
 
       {/* ── Top bar ── */}
       <div className="flex-none px-4 pb-3">
-        {/* Type chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+        {/* Type tiles (same style as category icons) */}
+        <div className="flex gap-3 overflow-x-auto pt-1.5 pb-2 pl-[5px]" style={{ scrollbarWidth: "none" }}>
           {PLAN_TYPES.map((pt) => {
             const isActive = planType === pt.value;
             return (
@@ -87,12 +134,39 @@ export default function BudgetPlanPage() {
                 key={pt.value}
                 type="button"
                 onClick={() => setPlanType(pt.value)}
-                className={`font-body flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-pill border-2 border-ink text-[11px] font-bold uppercase tracking-[0.5px] transition-all ${
-                  isActive ? "bg-primary text-white shadow-neo-xs" : "bg-base text-muted shadow-none"
-                }`}
+                className="flex-none flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-[120ms]"
               >
-                <span>{pt.icon}</span>
-                {pt.label}
+                <div
+                  className="w-[52px] h-[52px] flex items-center justify-center border-[2.5px] border-ink rounded-[10px] transition-all duration-[120ms]"
+                  style={{
+                    backgroundColor: pt.color,
+                    boxShadow: isActive ? "var(--shadow-neo-md)" : "var(--shadow-neo-xs)",
+                    transform: isActive ? "translate(-2px, -2px) scale(1.1)" : "none",
+                    opacity: isActive ? 1 : 0.72,
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="26"
+                    height="26"
+                    fill="none"
+                    stroke="#111008"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {pt.paths.map((d, i) => (
+                      <path key={i} d={d} />
+                    ))}
+                  </svg>
+                </div>
+                <span
+                  className={`font-body text-center leading-tight text-[9px] max-w-[60px] overflow-hidden text-ellipsis whitespace-nowrap ${
+                    isActive ? "font-[800] text-ink" : "font-[500] text-muted"
+                  }`}
+                >
+                  {pt.label}
+                </span>
               </button>
             );
           })}

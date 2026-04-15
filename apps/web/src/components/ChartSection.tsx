@@ -12,10 +12,12 @@ export function ChartSection({
   slices,
   totalLabel,
   monthlyData,
+  title,
 }: {
   slices: SliceData[];
   totalLabel: string;
   monthlyData: MonthData[];
+  title?: string;
 }) {
   const [view, setView] = useState<View>("pie");
   const touchStartX = useRef<number | null>(null);
@@ -35,19 +37,26 @@ export function ChartSection({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Tab toggle ── */}
-      <div className="flex-none flex gap-0.5 mb-2 p-0.5 rounded-[10px] border-2 border-ink w-fit self-end bg-ink">
-        {(["pie", "bar"] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`font-body px-3 py-[3px] rounded-[7px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-colors ${
-              view === v ? "bg-reward text-ink" : "bg-transparent text-base"
-            }`}
-          >
-            {v === "pie" ? "Breakdown" : "6-Month"}
-          </button>
-        ))}
+      {/* ── Header: title + tab toggle ── */}
+      <div className="flex-none flex items-center justify-between mb-2">
+        {title ? (
+          <h2 className="font-body text-[12px] font-black uppercase tracking-[1.5px] text-ink">
+            {title}
+          </h2>
+        ) : <span />}
+        <div className="flex gap-0.5 p-0.5 rounded-[10px] border-2 border-ink w-fit bg-ink">
+          {(["pie", "bar"] as View[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`font-body px-3 py-[3px] rounded-[7px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-colors ${
+                view === v ? "bg-reward text-ink" : "bg-transparent text-base"
+              }`}
+            >
+              {v === "pie" ? "Breakdown" : "6-Month"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Chart area (swipeable) ── */}

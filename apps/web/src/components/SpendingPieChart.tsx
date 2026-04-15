@@ -10,6 +10,14 @@ const CY = 120;         // centre y in viewBox
 const R = 100;          // outer radius
 const INNER_R = 63;     // donut hole radius
 
+const MAX_LABEL_CHARS = 11;
+
+function truncate(text: string): string {
+  return text.length > MAX_LABEL_CHARS
+    ? text.slice(0, MAX_LABEL_CHARS - 1).trimEnd() + "…"
+    : text;
+}
+
 function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
   return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
@@ -59,10 +67,24 @@ export function SpendingPieChart({
     });
 
 
+  // Callout labels for slices larger than5%
+  const callouts = arcs
+    .filter((a) => a.amount / total > 0.05)
+    .map((a) => {
+      const midDeg = (a.start + a.end) / 2;
+      const p1 = polarToCartesian(CX, CY, R + 2, midDeg);
+      const elbow = polarToCartesian(CX, CY, R + 14, midDeg);
+      const isRight = elbow.x >= CX;
+      const labelX = isRight ? CX + R + 30 : CX - R - 30;
+      const labelY = elbow.y;
+      const pct = Math.round((a.amount / total) * 100);
+      return { a, p1, elbow, labelX, labelY, isRight, pct };
+    });
+
   return (
     <div className="w-full h-full flex flex-col">
       <svg
-        viewBox="0 0 240 240"
+        viewBox="-110 -10 460 260"
         className="flex-1 min-h-0 w-full"
         preserveAspectRatio="xMidYMid meet"
         aria-label="Spending breakdown by category"
@@ -76,6 +98,52 @@ export function SpendingPieChart({
             stroke="#111008"
             strokeWidth="2"
           />
+        ))}
+
+        {/* ── Callout labels (slices > 15%) ── */}
+        {callouts.map(({ a, p1, elbow, labelX, labelY, isRight, pct }, i) => (
+          <g key={`callout-${i}`}>
+            <polyline
+              points={`${p1.x.toFixed(2)},${p1.y.toFixed(2)} ${elbow.x.toFixed(2)},${elbow.y.toFixed(2)} ${labelX},${labelY}`}
+              fill="none"
+              stroke="#111008"
+              strokeWidth="1"
+            />
+            <circle cx={p1.x} cy={p1.y} r="1.6" fill="#111008" />
+            <rect
+              x={isRight ? labelX + 3 : labelX - 12}
+              y={labelY - 10}
+              width="9"
+              height="9"
+              rx="2"
+              fill={a.color}
+              stroke="#111008"
+              strokeWidth="1"
+            />
+            <text
+              x={labelX + (isRight ? 15 : -15)}
+              y={labelY - 2}
+              textAnchor={isRight ? "start" : "end"}
+              fontSize="13"
+              fontFamily="Space Grotesk, sans-serif"
+              fontWeight="700"
+              fill="#111008"
+            >
+              <title>{a.label}</title>
+              {truncate(a.label)}
+            </text>
+            <text
+              x={labelX + (isRight ? 15 : -15)}
+              y={labelY + 12}
+              textAnchor={isRight ? "start" : "end"}
+              fontSize="11"
+              fontFamily="Space Grotesk, sans-serif"
+              fontWeight="600"
+              fill="#555"
+            >
+              {pct}%
+            </text>
+          </g>
         ))}
 
         {/* ── Inner hole ── */}
@@ -115,8 +183,8 @@ export function SpendingPieChart({
 
       </svg>
 
-      {/* ── Bottom legend ── */}
-      <div className="flex-none flex flex-wrap justify-center gap-x-3 gap-y-1 pb-1">
+      {/* ── Bottom legend (hidden for now) ── */}
+      <div className="hidden flex-none flex-wrap justify-center gap-x-3 gap-y-1 pb-1">
         {arcs.map((a, i) => (
           <div key={i} className="flex items-center gap-1">
             <span

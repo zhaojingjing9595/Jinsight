@@ -19,11 +19,13 @@ function fmtK(v: number): string {
 }
 
 export function MonthlyBarChart({ months }: { months: MonthData[] }) {
-  const maxVal = Math.max(...months.flatMap((m) => [m.income, m.spent]));
-  // Round up to a nice ceiling so bars never touch the top
-  const ceiling = Math.ceil(maxVal / 1000) * 1000;
+  const safeMonths = months.length > 0 ? months : [{ month: "—", income: 0, spent: 0 }];
+  const values = safeMonths.flatMap((m) => [m.income, m.spent]);
+  const maxVal = values.length > 0 ? Math.max(...values) : 0;
+  // Round up to a nice ceiling so bars never touch the top — never fall below 1000
+  const ceiling = Math.max(1000, Math.ceil(maxVal / 1000) * 1000);
 
-  const groupW = CHART_W / months.length;
+  const groupW = CHART_W / safeMonths.length;
   const barW = groupW * 0.58;
   const barOffsetX = (groupW - barW) / 2;
 
@@ -78,7 +80,7 @@ export function MonthlyBarChart({ months }: { months: MonthData[] }) {
       ))}
 
       {/* ── Bars ── */}
-      {months.map((m, i) => {
+      {safeMonths.map((m, i) => {
         const overspent = m.spent > m.income;
         // When overspending: both bars are more transparent
         const incomeOpacity = overspent ? 0.52 : 0.85;
