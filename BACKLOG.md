@@ -11,13 +11,17 @@ Running list of things to revisit later. Jot ideas down freely — triage later.
 ## Small Adjustments
 
 <!-- - [ ] UI tweak, copy change, spacing, etc. -->
+--- 04.15 ---
 - [x] Home UI: separate chart container with the list, and make the scrolling invisible?
 - [x] Home UI: transaction list: change category icon the same as add page
-- [ ] Add UI: change "Add" Page to a popup page , backdrop the background, when finish adding, it stays at whatever page it was;
-- [ ] Add UI: amount input should allow keyboard input
-- [ ] Add UI: rearrange expense/income with Top 3 options;
-- [ ] Home UI: pie chart colors arrangement, tooltip
-- [ ] Home UI: total balance font
+- [x] Home UI: pie chart colors arrangement, tooltip
+--- 04.16 ---
+- [x] Add UI: change "Add" Page to a popup page , backdrop the background, when finish adding, it stays at whatever page it was;
+- [x] change "Map" page to "budget plan" 
+- [] Add UI: amount input should allow keyboard input
+- [] Add UI: rearrange expense/income with Top 3 options;
+- [] Add > transaction: missing add new category function; 
+- [] Home UI: total balance font
 
 
 ## Features
@@ -32,3 +36,4 @@ Running list of things to revisit later. Jot ideas down freely — triage later.
 ## Ideas / Maybe
 
 <!-- - [ ] Half-formed thoughts, things to explore -->
+-[] Add Shared account

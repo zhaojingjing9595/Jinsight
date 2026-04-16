@@ -73,6 +73,9 @@ export default function DashboardPage() {
     }
 
     load();
+    const onAdded = () => load();
+    window.addEventListener("jinsight:transaction-added", onAdded);
+    return () => window.removeEventListener("jinsight:transaction-added", onAdded);
   }, []);
 
   const totalIncome = transactions
