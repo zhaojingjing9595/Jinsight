@@ -11,7 +11,7 @@ type BottomNavProps = {
 
 const NAV_ITEMS: { id: NavItem; label: string; href: string; icon: string }[] = [
   { id: "home",    label: "HOME",  href: "/dashboard",    icon: "▦" },
-  { id: "plan",    label: "PLAN",  href: "/budget-plan",  icon: "▤" },
+  { id: "plan",    label: "PLANS", href: "/plans",         icon: "▤" },
   { id: "add",     label: "ADD",   href: "/add",          icon: "+" },
   { id: "story",   label: "STORY", href: "/story",        icon: "≈" },
   { id: "profile", label: "ME",    href: "/profile",      icon: "◉" },
