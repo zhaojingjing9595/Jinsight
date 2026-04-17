@@ -70,7 +70,7 @@ export function TransactionHistory({
 
       <div className="flex flex-col gap-2 px-3 py-3">
         {sorted.map((t) => {
-          const meta = CATEGORY_META[t.category];
+          const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
           const isExpense = t.type === "EXPENSE";
           const isEditing = editingId === t.id;
           const isPending = pendingId === t.id;
