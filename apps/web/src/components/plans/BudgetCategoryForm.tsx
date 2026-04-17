@@ -48,30 +48,30 @@ export function BudgetCategoryForm({
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-ink/40 z-50"
-        onClick={onClose}
-      />
+    <div
+      className="fixed inset-0 z-[100] flex bg-base animate-[slideUp_200ms_cubic-bezier(0.2,0.8,0.2,1)]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={isEdit ? "Edit budget" : "Add category budget"}
+    >
+      <div className="relative w-full max-w-[480px] mx-auto flex flex-col h-dvh">
+        {/* Header */}
+        <div className="flex-none relative flex items-center justify-center px-4 pt-5 pb-3">
+          <h2 className="font-display font-black text-[20px] text-ink uppercase tracking-[1px]">
+            {isEdit ? "Edit Budget" : "Add Category Budget"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center border-2 border-ink rounded-full bg-base shadow-neo-xs font-body font-bold text-[15px] text-ink transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          >
+            ✕
+          </button>
+        </div>
 
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
-        <div className="w-full max-w-[480px] bg-base border-t-[2.5px] border-x-[2.5px] border-ink rounded-t-[16px] px-4 pt-4 pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-body text-[14px] font-black uppercase tracking-[1.5px] text-ink">
-              {isEdit ? "Edit Budget" : "Add Category Budget"}
-            </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-[32px] h-[32px] flex items-center justify-center border-2 border-ink rounded-[8px] bg-base shadow-neo-xs active:shadow-none active:translate-x-[1px] active:translate-y-[1px]"
-            >
-              <span className="text-[16px] font-bold text-ink">×</span>
-            </button>
-          </div>
-
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-5">
           {/* Category picker */}
           <div className="mb-3">
             <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
@@ -152,6 +152,13 @@ export function BudgetCategoryForm({
           </div>
         </div>
       </div>
-    </>
+
+      <style jsx>{`
+        @keyframes slideUp {
+          from { transform: translateY(24px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 }

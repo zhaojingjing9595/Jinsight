@@ -93,7 +93,32 @@ export function BudgetDashboard() {
         }),
       ]);
 
-      setBudget(budgetData.budgets[0] ?? null);
+      let currentBudget = budgetData.budgets[0] ?? null;
+
+      // Auto-copy from previous month if no budget exists for this month
+      if (!currentBudget && accId) {
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const prevYear = month === 1 ? year - 1 : year;
+        try {
+          const copied = await trpcMutate<{ budget: ApiBudget }>(
+            "budgets.copyFromMonth",
+            {
+              accountId: accId,
+              fromMonth: prevMonth,
+              fromYear: prevYear,
+              toMonth: month,
+              toYear: year,
+            },
+          );
+          if (copied.budget) {
+            currentBudget = copied.budget;
+          }
+        } catch {
+          // No previous month budget — that's fine
+        }
+      }
+
+      setBudget(currentBudget);
 
       // Group expenses by category
       const spent: Record<string, number> = {};

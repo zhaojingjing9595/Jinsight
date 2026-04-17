@@ -100,6 +100,81 @@ export const budgetsRouter = router({
       return { budget: result };
     }),
 
+  /** Copy category budgets from a previous month into a new month. */
+  copyFromMonth: protectedProcedure
+    .input(
+      z.object({
+        accountId: z.string(),
+        fromMonth: z.number().int().min(1).max(12),
+        fromYear: z.number().int(),
+        toMonth: z.number().int().min(1).max(12),
+        toYear: z.number().int(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Find source budget
+      const source = await ctx.prisma.budget.findUnique({
+        where: {
+          accountId_month_year: {
+            accountId: input.accountId,
+            month: input.fromMonth,
+            year: input.fromYear,
+          },
+        },
+        include: { categories: true },
+      });
+
+      if (!source || source.categories.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No budget found for the source month",
+        });
+      }
+
+      // Upsert target budget and copy categories
+      const target = await ctx.prisma.budget.upsert({
+        where: {
+          accountId_month_year: {
+            accountId: input.accountId,
+            month: input.toMonth,
+            year: input.toYear,
+          },
+        },
+        update: {},
+        create: {
+          accountId: input.accountId,
+          period: source.period,
+          month: input.toMonth,
+          year: input.toYear,
+          totalLimit: source.totalLimit,
+          rollover: source.rollover,
+          createdBy: ctx.userId,
+        },
+      });
+
+      // Only copy if target has no categories yet
+      const existingCount = await ctx.prisma.budgetCategory.count({
+        where: { budgetId: target.id },
+      });
+
+      if (existingCount === 0) {
+        await ctx.prisma.budgetCategory.createMany({
+          data: source.categories.map((c) => ({
+            budgetId: target.id,
+            category: c.category,
+            limit: c.limit,
+          })),
+        });
+      }
+
+      const result = await ctx.prisma.budget.findUnique({
+        where: { id: target.id },
+        include: { categories: true },
+      });
+
+      return { budget: result };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

@@ -1,11 +1,10 @@
 import Link from "next/link";
 
-type AddTab = "transaction" | "budget" | "invest";
+type AddTab = "transaction" | "budget";
 
 const TABS = [
   { id: "transaction" as const, label: "Transaction", href: "/add"              },
   { id: "budget" as const,      label: "Budget",      href: "/add/budget-plan"  },
-  { id: "invest" as const,      label: "Invest",      href: "/add/investment"   },
 ];
 
 export function AddSwitcher({ active }: { active: AddTab }) {
