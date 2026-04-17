@@ -42,6 +42,21 @@ enum BudgetPlanRole {
   MEMBER
 }
 
+enum GoalType {
+  TRIP_EVENT
+  PURCHASE
+  EMERGENCY
+  DEBT
+  CUSTOM
+}
+
+enum GoalStatus {
+  PLANNING
+  SAVING
+  ACTIVE
+  COMPLETE
+}
+
 model User {
   id           String        @id
   email        String        @unique
@@ -79,18 +94,21 @@ model AccountMember {
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  accountId   String
-  amount      Float
-  type        TxType
-  category    String
-  description String?
-  date        DateTime
+  id           String      @id @default(uuid())
+  accountId    String
+  amount       Float
+  type         TxType
+  category     String
+  description  String?
+  date         DateTime
   isRecurring  Boolean     @default(false)
   budgetPlanId String?
+  goalId       String?
+  excludeFromBudget Boolean @default(false)
   createdAt    DateTime    @default(now())
   account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   budgetPlan   BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+  goal         Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
@@ -157,14 +175,21 @@ model BudgetPlanCategory {
 }
 
 model Goal {
-  id           String    @id @default(uuid())
+  id           String     @id @default(uuid())
   userId       String
+  type         GoalType   @default(CUSTOM)
   name         String
+  emoji        String     @default("🎯")
   targetAmount Float
-  savedAmount  Float     @default(0)
-  deadline     DateTime?
-  createdAt    DateTime  @default(now())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAmount  Float      @default(0)
+  startDate    DateTime?
+  endDate      DateTime?
+  status       GoalStatus @default(PLANNING)
+  spendingPlan Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 }
 
 model Bill {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CATEGORY_META, EXPENSE_CATEGORY_ORDER, formatCurrency } from "@jinsight/core";
 import type { ExpenseCategory } from "@jinsight/core";
 import { NumPad } from "@/components/NumPad";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 type BudgetCategoryFormProps = {
   /** Prefill for editing; omit for create mode */
@@ -90,7 +91,7 @@ export function BudgetCategoryForm({
                     className="flex-none flex flex-col items-center gap-1 active:scale-95 transition-transform duration-[120ms]"
                   >
                     <div
-                      className="w-[42px] h-[42px] flex items-center justify-center text-[20px] border-2 border-ink rounded-[8px] transition-all duration-[120ms]"
+                      className="w-[42px] h-[42px] flex items-center justify-center border-2 border-ink rounded-[8px] transition-all duration-[120ms]"
                       style={{
                         backgroundColor: meta.color,
                         boxShadow: isActive ? "var(--shadow-neo-sm)" : "none",
@@ -98,7 +99,7 @@ export function BudgetCategoryForm({
                         opacity: isActive ? 1 : 0.6,
                       }}
                     >
-                      {meta.icon}
+                      <CategoryIcon category={c} size={22} />
                     </div>
                     <span
                       className={`font-body text-[8px] max-w-[48px] text-center leading-tight truncate ${

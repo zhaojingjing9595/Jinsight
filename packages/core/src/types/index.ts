@@ -8,7 +8,8 @@ export type {
   IncomeCategory,
 } from "./transaction";
 export type { Budget, BudgetWithSpend, BudgetPeriod } from "./budget";
-export type { Goal, GoalWithProgress } from "./goal";
+export type { Goal, GoalWithProgress, GoalType, GoalStatus, SpendingPlanItem } from "./goal";
+export { GOAL_TYPE_META, GOAL_STATUS_META, computeGoalProgress, getGoalHealthStatus } from "./goal";
 export type {
   BudgetPlan,
   BudgetPlanInput,

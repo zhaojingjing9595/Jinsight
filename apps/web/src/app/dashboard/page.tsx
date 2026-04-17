@@ -118,77 +118,73 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh">
-      {/* ── Section 1: Balance hero (~18 dvh) ── */}
-      <div className="min-h-0 flex flex-col pt-8 pb-3" style={{ flex: "0 0 18dvh" }}>
-        <div className="flex-1 border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 flex flex-col items-center justify-center text-center bg-reward">
-          <p className="font-body text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
-            {monthLabel} · Current Balance
-          </p>
-          <h1
-            className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-            style={{ fontSize: "clamp(34px, 5.5dvh, 56px)" }}
-          >
-            {formatCurrency(monthBalance, "ILS")}
-          </h1>
-          <p className="font-body text-[10px] font-medium mt-1 text-reward-dark">
-            Income minus spending this month
-          </p>
-        </div>
+    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh gap-3 pt-6 pb-0">
+      {/* ── Section 1: Balance hero ── */}
+      <div className="flex-none border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 py-4 flex flex-col items-center justify-center text-center bg-reward">
+        <p className="font-body text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
+          {monthLabel} · Current Balance
+        </p>
+        <h1
+          className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+          style={{ fontSize: "clamp(28px, 5dvh, 48px)" }}
+        >
+          {formatCurrency(monthBalance, "ILS")}
+        </h1>
+        <p className="font-body text-[10px] font-medium mt-1 text-reward-dark">
+          Income minus spending this month
+        </p>
       </div>
 
-      {/* ── Section 2: Income vs Spent bar (~12 dvh) ── */}
-      <div className="min-h-0 flex flex-col pb-3" style={{ flex: "0 0 12dvh" }}>
-        <div className="flex-1 border-[2.5px] border-ink rounded-card shadow-neo-md px-4 py-2 flex flex-col justify-center gap-1.5 bg-base">
-          <div className="flex justify-between items-end">
-            <div>
-              <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
-                Spent
-              </p>
-              <p
-                className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
-              >
-                {formatCurrency(totalExpenses, "ILS")}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-income">
-                Income
-              </p>
-              <p
-                className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-                style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
-              >
-                {formatCurrency(totalIncome, "ILS")}
-              </p>
-            </div>
-          </div>
-
+      {/* ── Section 2: Income vs Spent bar ── */}
+      <div className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 py-2 flex flex-col justify-center gap-1.5 bg-base">
+        <div className="flex justify-between items-end">
           <div>
-            <div className="h-[20px] rounded-[30px] border-[2px] border-ink overflow-hidden relative bg-income">
-              <div
-                className="absolute left-0 top-0 h-full bg-alert"
-                style={{ width: `${spentRatio}%`, borderRadius: "28px 0 0 28px" }}
-              />
-              <div
-                className="absolute top-0 bottom-0 w-[2px] bg-ink"
-                style={{ left: `${spentRatio}%` }}
-              />
-            </div>
-            <div className="flex justify-end mt-1">
-              <span className="font-body text-[9px] font-semibold text-income-dark">
-                {formatCurrency(totalIncome - totalExpenses, "ILS")} left
-              </span>
-            </div>
+            <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
+              Spent
+            </p>
+            <p
+              className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+              style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
+            >
+              {formatCurrency(totalExpenses, "ILS")}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-income">
+              Income
+            </p>
+            <p
+              className="font-display font-medium leading-none text-ink tracking-[0.01em]"
+              style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
+            >
+              {formatCurrency(totalIncome, "ILS")}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <div className="h-[20px] rounded-[30px] border-[2px] border-ink overflow-hidden relative bg-income">
+            <div
+              className="absolute left-0 top-0 h-full bg-alert"
+              style={{ width: `${spentRatio}%`, borderRadius: "28px 0 0 28px" }}
+            />
+            <div
+              className="absolute top-0 bottom-0 w-[2px] bg-ink"
+              style={{ left: `${spentRatio}%` }}
+            />
+          </div>
+          <div className="flex justify-end mt-1">
+            <span className="font-body text-[9px] font-semibold text-income-dark">
+              {formatCurrency(totalIncome - totalExpenses, "ILS")} left
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── Section 3: Chart (fixed) ── */}
+      {/* ── Section 3: Chart ── */}
       <div
-        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base mb-3"
-        style={{ height: "clamp(220px, 38dvh, 320px)" }}
+        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
+        style={{ height: "clamp(190px, 32dvh, 280px)" }}
       >
         <div className="flex-1 min-h-0">
           <ChartSection

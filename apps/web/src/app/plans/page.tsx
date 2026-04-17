@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { BudgetDashboard } from "@/components/plans/BudgetDashboard";
+import { GoalsDashboard } from "@/components/plans/GoalsDashboard";
 
 type Tab = "budget" | "goals" | "wealth";
 
@@ -48,12 +49,7 @@ export default function PlansPage() {
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[calc(80px+16px)]">
         {tab === "budget" && <BudgetDashboard />}
-        {tab === "goals" && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <span className="text-[40px]">🎯</span>
-            <p className="font-body text-[14px] font-bold text-muted">Goals — coming soon</p>
-          </div>
-        )}
+        {tab === "goals" && <GoalsDashboard />}
         {tab === "wealth" && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <span className="text-[40px]">💎</span>

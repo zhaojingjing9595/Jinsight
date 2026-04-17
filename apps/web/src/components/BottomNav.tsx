@@ -9,12 +9,29 @@ type BottomNavProps = {
   active?: NavItem;
 };
 
-const NAV_ITEMS: { id: NavItem; label: string; href: string; icon: string }[] = [
-  { id: "home",    label: "HOME",  href: "/dashboard",    icon: "▦" },
-  { id: "plan",    label: "PLANS", href: "/plans",         icon: "▤" },
-  { id: "add",     label: "ADD",   href: "/add",          icon: "+" },
-  { id: "story",   label: "STORY", href: "/story",        icon: "≈" },
-  { id: "profile", label: "ME",    href: "/profile",      icon: "◉" },
+const NAV_ICON_PATHS: Record<NavItem, string[]> = {
+  home: ["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z", "M9 22V12h6v10"],
+  plan: ["M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2", "M9 5a2 2 0 012-2h2a2 2 0 012 2v0a2 2 0 01-2 2h-2a2 2 0 01-2-2z", "M9 14l2 2 4-4"],
+  add: ["M12 5v14", "M5 12h14"],
+  story: ["M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z", "M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"],
+  profile: ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 3a4 4 0 100 8 4 4 0 000-8z"],
+};
+
+function NavIcon({ id, size = 18 }: { id: NavItem; size?: number }) {
+  const paths = NAV_ICON_PATHS[id];
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+      {paths.map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
+const NAV_ITEMS: { id: NavItem; label: string; href: string }[] = [
+  { id: "home",    label: "HOME",  href: "/dashboard" },
+  { id: "plan",    label: "PLANS", href: "/plans" },
+  { id: "add",     label: "ADD",   href: "/add" },
+  { id: "story",   label: "STORY", href: "/story" },
+  { id: "profile", label: "ME",    href: "/profile" },
 ];
 
 export function BottomNav({ active }: BottomNavProps) {
@@ -37,7 +54,7 @@ export function BottomNav({ active }: BottomNavProps) {
                     }`
               }`}
             >
-              {item.icon}
+              <NavIcon id={item.id} size={isAdd ? 22 : 18} />
             </div>
             {!isAdd && (
               <span

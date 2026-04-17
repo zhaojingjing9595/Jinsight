@@ -5,6 +5,7 @@ import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Category } from "@jinsight/core";
 import type { BudgetPlanType, CategoryAllocation } from "@jinsight/core";
 import { NumPad } from "@/components/NumPad";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 const PLAN_TYPES: {
   value: BudgetPlanType;
@@ -283,10 +284,10 @@ export function BudgetPlanForm() {
                   className="flex items-center gap-2 p-2 border-2 border-ink rounded-[10px] bg-base shadow-neo-xs"
                 >
                   <div
-                    className="w-9 h-9 flex items-center justify-center text-[18px] border-[1.5px] border-ink rounded-icon flex-none"
+                    className="w-9 h-9 flex items-center justify-center border-[1.5px] border-ink rounded-icon flex-none"
                     style={{ backgroundColor: meta.color }}
                   >
-                    {meta.icon}
+                    <CategoryIcon category={alloc.category as Category} size={20} />
                   </div>
                   <select
                     value={alloc.category}

@@ -12,6 +12,7 @@ export const transactionsRouter = router({
         category: z.string().optional(),
         type: z.enum(["INCOME", "EXPENSE"]).optional(),
         budgetPlanId: z.string().optional(),
+        goalId: z.string().optional(),
         limit: z.number().int().min(1).max(100).default(50),
         offset: z.number().int().min(0).default(0),
       }),
@@ -34,6 +35,7 @@ export const transactionsRouter = router({
           ...(input.type && { type: input.type }),
           ...(input.category && { category: input.category }),
           ...(input.budgetPlanId && { budgetPlanId: input.budgetPlanId }),
+          ...(input.goalId && { goalId: input.goalId }),
           ...(dateFilter.gte && { date: dateFilter }),
         },
         orderBy: { date: "desc" },
@@ -70,6 +72,8 @@ export const transactionsRouter = router({
         date: z.string().datetime(),
         isRecurring: z.boolean().default(false),
         budgetPlanId: z.string().optional(),
+        goalId: z.string().optional(),
+        excludeFromBudget: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -91,6 +95,8 @@ export const transactionsRouter = router({
             date: new Date(input.date),
             isRecurring: input.isRecurring,
             budgetPlanId: input.budgetPlanId,
+            goalId: input.goalId,
+            excludeFromBudget: input.excludeFromBudget,
           },
         }),
         ctx.prisma.account.update({
@@ -113,6 +119,8 @@ export const transactionsRouter = router({
         date: z.string().datetime().optional(),
         isRecurring: z.boolean().optional(),
         budgetPlanId: z.string().nullable().optional(),
+        goalId: z.string().nullable().optional(),
+        excludeFromBudget: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

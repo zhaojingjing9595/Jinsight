@@ -47,6 +47,8 @@ export function BudgetDashboard() {
   const [budget, setBudget] = useState<ApiBudget | null>(null);
   const [spentByCategory, setSpentByCategory] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [hasPrevBudget, setHasPrevBudget] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   // Form state
   const [formOpen, setFormOpen] = useState(false);
@@ -93,32 +95,26 @@ export function BudgetDashboard() {
         }),
       ]);
 
-      let currentBudget = budgetData.budgets[0] ?? null;
+      const currentBudget = budgetData.budgets[0] ?? null;
+      setBudget(currentBudget);
 
-      // Auto-copy from previous month if no budget exists for this month
+      // Check if previous month has a budget (for "Same as last month" button)
       if (!currentBudget && accId) {
         const prevMonth = month === 1 ? 12 : month - 1;
         const prevYear = month === 1 ? year - 1 : year;
         try {
-          const copied = await trpcMutate<{ budget: ApiBudget }>(
-            "budgets.copyFromMonth",
-            {
-              accountId: accId,
-              fromMonth: prevMonth,
-              fromYear: prevYear,
-              toMonth: month,
-              toYear: year,
-            },
-          );
-          if (copied.budget) {
-            currentBudget = copied.budget;
-          }
+          const prevData = await trpcQuery<{ budgets: ApiBudget[] }>("budgets.list", {
+            accountId: accId,
+            month: prevMonth,
+            year: prevYear,
+          });
+          setHasPrevBudget((prevData.budgets[0]?.categories.length ?? 0) > 0);
         } catch {
-          // No previous month budget — that's fine
+          setHasPrevBudget(false);
         }
+      } else {
+        setHasPrevBudget(false);
       }
-
-      setBudget(currentBudget);
 
       // Group expenses by category
       const spent: Record<string, number> = {};
@@ -201,6 +197,27 @@ export function BudgetDashboard() {
     load();
   }
 
+  async function copyFromLastMonth() {
+    if (!accountId || copying) return;
+    setCopying(true);
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    try {
+      await trpcMutate("budgets.copyFromMonth", {
+        accountId,
+        fromMonth: prevMonth,
+        fromYear: prevYear,
+        toMonth: month,
+        toYear: year,
+      });
+      load();
+    } catch (err) {
+      console.error("Failed to copy budget:", err);
+    } finally {
+      setCopying(false);
+    }
+  }
+
   /* ── Render ── */
 
   if (loading) {
@@ -240,16 +257,28 @@ export function BudgetDashboard() {
             No budget set for this month
           </p>
           {isCurrentOrFuture && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingCategory(null);
-                setFormOpen(true);
-              }}
-              className="font-body mt-2 px-5 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-primary text-white shadow-neo-md active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-            >
-              Set Your First Budget
-            </button>
+            <div className="flex flex-col gap-2 mt-2 w-full max-w-[280px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCategory(null);
+                  setFormOpen(true);
+                }}
+                className="font-body w-full px-5 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-primary text-white shadow-neo-md active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+              >
+                Create New Budget
+              </button>
+              {hasPrevBudget && (
+                <button
+                  type="button"
+                  onClick={copyFromLastMonth}
+                  disabled={copying}
+                  className="font-body w-full px-5 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-base text-ink shadow-neo-md active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {copying ? "Copying..." : "Same as Last Month"}
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : (
@@ -258,6 +287,20 @@ export function BudgetDashboard() {
             totalBudgeted={totalBudgeted}
             totalSpent={totalSpent}
           />
+
+          {/* Add another category */}
+          {isCurrentOrFuture && usedCats.length < EXPENSE_CATEGORY_ORDER.length && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCategory(null);
+                setFormOpen(true);
+              }}
+              className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors"
+            >
+              + Add Category
+            </button>
+          )}
 
           <div className="flex flex-col gap-2.5">
             {categories.map((cat) => (
@@ -277,20 +320,6 @@ export function BudgetDashboard() {
               />
             ))}
           </div>
-
-          {/* Add another category */}
-          {isCurrentOrFuture && usedCats.length < EXPENSE_CATEGORY_ORDER.length && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingCategory(null);
-                setFormOpen(true);
-              }}
-              className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors"
-            >
-              + Add Category
-            </button>
-          )}
         </>
       )}
 

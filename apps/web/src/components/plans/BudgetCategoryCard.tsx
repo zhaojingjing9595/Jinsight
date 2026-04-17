@@ -2,6 +2,7 @@
 
 import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Category, Currency } from "@jinsight/core";
+import { CategoryIcon } from "@/components/CategoryIcon";
 
 type BudgetCategoryCardProps = {
   category: Category;
@@ -47,10 +48,10 @@ export function BudgetCategoryCard({
       {/* Top row: icon + name + amount */}
       <div className="flex items-center gap-2.5 mb-2">
         <div
-          className="w-[36px] h-[36px] flex items-center justify-center text-[18px] border-[1.5px] border-ink rounded-[8px] flex-none"
+          className="w-[36px] h-[36px] flex items-center justify-center border-[1.5px] border-ink rounded-[8px] flex-none"
           style={{ backgroundColor: meta.color }}
         >
-          {meta.icon}
+          <CategoryIcon category={category} size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-body text-[13px] font-bold text-ink truncate">

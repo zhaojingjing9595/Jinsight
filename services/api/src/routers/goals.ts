@@ -2,6 +2,15 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
 
+const GoalTypeEnum = z.enum(["TRIP_EVENT", "PURCHASE", "EMERGENCY", "DEBT", "CUSTOM"]);
+const GoalStatusEnum = z.enum(["PLANNING", "SAVING", "ACTIVE", "COMPLETE"]);
+
+const SpendingPlanItem = z.object({
+  category: z.string(),
+  budget: z.number().min(0),
+  actual: z.number().min(0).default(0),
+});
+
 export const goalsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const goals = await ctx.prisma.goal.findMany({
@@ -27,20 +36,30 @@ export const goalsRouter = router({
   create: protectedProcedure
     .input(
       z.object({
+        type: GoalTypeEnum,
         name: z.string().min(1),
+        emoji: z.string().default("🎯"),
         targetAmount: z.number().positive(),
         savedAmount: z.number().min(0).default(0),
-        deadline: z.string().datetime().optional(),
+        startDate: z.string().datetime().optional(),
+        endDate: z.string().datetime().optional(),
+        status: GoalStatusEnum.default("SAVING"),
+        spendingPlan: z.array(SpendingPlanItem).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.create({
         data: {
           userId: ctx.userId,
+          type: input.type,
           name: input.name,
+          emoji: input.emoji,
           targetAmount: input.targetAmount,
           savedAmount: input.savedAmount,
-          deadline: input.deadline ? new Date(input.deadline) : null,
+          startDate: input.startDate ? new Date(input.startDate) : null,
+          endDate: input.endDate ? new Date(input.endDate) : null,
+          status: input.status,
+          spendingPlan: input.spendingPlan ?? undefined,
         },
       });
 
@@ -51,10 +70,15 @@ export const goalsRouter = router({
     .input(
       z.object({
         id: z.string(),
+        type: GoalTypeEnum.optional(),
         name: z.string().min(1).optional(),
+        emoji: z.string().optional(),
         targetAmount: z.number().positive().optional(),
         savedAmount: z.number().min(0).optional(),
-        deadline: z.string().datetime().nullable().optional(),
+        startDate: z.string().datetime().nullable().optional(),
+        endDate: z.string().datetime().nullable().optional(),
+        status: GoalStatusEnum.optional(),
+        spendingPlan: z.array(SpendingPlanItem).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -63,12 +87,13 @@ export const goalsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Not your goal" });
       }
 
-      const { id, deadline, ...rest } = input;
+      const { id, startDate, endDate, ...rest } = input;
       const goal = await ctx.prisma.goal.update({
         where: { id },
         data: {
           ...rest,
-          ...(deadline !== undefined && { deadline: deadline ? new Date(deadline) : null }),
+          ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+          ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         },
       });
 
