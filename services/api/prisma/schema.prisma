@@ -57,6 +57,13 @@ enum GoalStatus {
   COMPLETE
 }
 
+enum BillRecurrence {
+  MONTHLY
+  ANNUAL
+  WEEKLY
+  CUSTOM
+}
+
 model User {
   id           String        @id
   email        String        @unique
@@ -193,13 +200,18 @@ model Goal {
 }
 
 model Bill {
-  id          String   @id @default(uuid())
-  userId      String
-  name        String
-  amount      Float
-  dueDate     DateTime
-  isRecurring Boolean  @default(false)
-  isPaid      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id @default(uuid())
+  userId         String
+  name           String
+  amount         Float
+  dueDate        DateTime
+  category       String          @default("utilities")
+  recurrence     BillRecurrence  @default(MONTHLY)
+  isRecurring    Boolean         @default(true)
+  isSubscription Boolean         @default(false)
+  reminderDays   Int             @default(3)
+  isPaid         Boolean         @default(false)
+  lastPaidDate   DateTime?
+  createdAt      DateTime        @default(now())
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

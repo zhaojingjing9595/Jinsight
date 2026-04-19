@@ -6,6 +6,7 @@ import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
 import { TransactionHistory } from "@/components/TransactionHistory";
+import { UpcomingBillsCard } from "@/components/bills/UpcomingBillsCard";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 
 type ApiTransaction = {
@@ -194,6 +195,11 @@ export default function DashboardPage() {
             monthlyData={monthlyData}
           />
         </div>
+      </div>
+
+      {/* ── Section 3.5: Upcoming bills ── */}
+      <div className="flex-none">
+        <UpcomingBillsCard />
       </div>
 
       {/* ── Section 4: Transaction history (card scrolls internally) ── */}
