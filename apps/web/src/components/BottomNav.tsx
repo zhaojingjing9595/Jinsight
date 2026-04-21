@@ -38,7 +38,7 @@ export function BottomNav({ active }: BottomNavProps) {
   const { open } = useAddModal();
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 flex items-center justify-around px-4 py-2 border-[2.5px] border-ink shadow-neo-md z-50 bg-base rounded-full">
+    <nav className="fixed bottom-3 left-4 right-4 flex items-center justify-around px-4 py-1 border-[2.5px] border-ink shadow-neo-md z-50 bg-base rounded-full">
       {NAV_ITEMS.map((item) => {
         const isActive = active === item.id;
         const isAdd = item.id === "add";

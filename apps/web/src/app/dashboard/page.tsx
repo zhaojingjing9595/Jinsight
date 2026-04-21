@@ -5,8 +5,7 @@ import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
-import { TransactionHistory } from "@/components/TransactionHistory";
-import { UpcomingBillsCard } from "@/components/bills/UpcomingBillsCard";
+import { BillsAndTransactionsCard } from "@/components/BillsAndTransactionsCard";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 
 type ApiTransaction = {
@@ -35,9 +34,19 @@ const currentMonth = now.getMonth() + 1;
 const currentYear = now.getFullYear();
 const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
+type ApiBill = {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: string;
+  category: string;
+  isPaid: boolean;
+};
+
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
+  const [bills, setBills] = useState<ApiBill[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,17 +64,18 @@ export default function DashboardPage() {
         const account = me.user.accounts[0];
         setBalance(account.balance);
 
-        const txData = await trpcQuery<{ transactions: ApiTransaction[] }>(
-          "transactions.list",
-          {
+        const [txData, billsData] = await Promise.all([
+          trpcQuery<{ transactions: ApiTransaction[] }>("transactions.list", {
             accountId: account.id,
             month: currentMonth,
             year: currentYear,
             limit: 50,
-          },
-        );
+          }),
+          trpcQuery<{ bills: ApiBill[] }>("bills.list", {}),
+        ]);
 
         setTransactions(txData.transactions.map(toTransaction));
+        setBills(billsData.bills);
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
       } finally {
@@ -75,8 +85,13 @@ export default function DashboardPage() {
 
     load();
     const onAdded = () => load();
+    const onBillChanged = () => load();
     window.addEventListener("jinsight:transaction-added", onAdded);
-    return () => window.removeEventListener("jinsight:transaction-added", onAdded);
+    window.addEventListener("jinsight:bill-changed", onBillChanged);
+    return () => {
+      window.removeEventListener("jinsight:transaction-added", onAdded);
+      window.removeEventListener("jinsight:bill-changed", onBillChanged);
+    };
   }, []);
 
   const totalIncome = transactions
@@ -119,73 +134,82 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh gap-3 pt-6 pb-0">
-      {/* ── Section 1: Balance hero ── */}
-      <div className="flex-none border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-5 py-4 flex flex-col items-center justify-center text-center bg-reward">
-        <p className="font-body text-[9px] font-bold uppercase tracking-[2.5px] mb-1 text-reward-dark">
-          {monthLabel} · Current Balance
-        </p>
-        <h1
-          className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-          style={{ fontSize: "clamp(28px, 5dvh, 48px)" }}
-        >
-          {formatCurrency(monthBalance, "ILS")}
-        </h1>
-        <p className="font-body text-[10px] font-medium mt-1 text-reward-dark">
-          Income minus spending this month
-        </p>
-      </div>
-
-      {/* ── Section 2: Income vs Spent bar ── */}
-      <div className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 py-2 flex flex-col justify-center gap-1.5 bg-base">
-        <div className="flex justify-between items-end">
-          <div>
-            <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-alert">
-              Spent
-            </p>
-            <p
-              className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-              style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
-            >
-              {formatCurrency(totalExpenses, "ILS")}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-income">
-              Income
-            </p>
-            <p
-              className="font-display font-medium leading-none text-ink tracking-[0.01em]"
-              style={{ fontSize: "clamp(16px, 2.5dvh, 22px)" }}
-            >
-              {formatCurrency(totalIncome, "ILS")}
-            </p>
+    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh gap-2 md:gap-3 pt-4 md:pt-6 pb-0">
+      {/* ── Section 1: Balance + Income vs Spent (combined) ── */}
+      <div className="flex-none border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-4 md:px-5 py-2 md:py-3 flex flex-col gap-1 bg-primary">
+        {/* Month selector + Header */}
+        <div className="flex items-center justify-between">
+          <p className="font-body text-[8px] md:text-[9px] font-bold uppercase tracking-[2.5px] text-white/80">
+            Total Balance
+          </p>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <button className="text-white text-[14px] md:text-[16px] leading-none">←</button>
+            <div className="px-2 md:px-3 py-0.5 md:py-1 rounded-pill bg-white/15 border border-white/30">
+              <span className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1px] text-white">
+                {now.toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
+              </span>
+            </div>
+            <button className="text-white text-[14px] md:text-[16px] leading-none">→</button>
           </div>
         </div>
 
-        <div>
-          <div className="h-[20px] rounded-[30px] border-[2px] border-ink overflow-hidden relative bg-income">
+        {/* Balance */}
+        <div className="flex flex-col items-center justify-start">
+          <h1
+            className="font-display font-bold leading-none text-white tracking-[0.01em]"
+            style={{ fontSize: "clamp(28px, 4dvh, 48px)" }}
+          >
+            {formatCurrency(balance, "ILS")}
+          </h1>
+        </div>
+
+        {/* Income vs Spent bar */}
+        <div className="flex flex-col gap-1 md:gap-1.5">
+          {/* Legend */}
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex items-center gap-0.5 md:gap-1">
+              <div className="w-2 md:w-3 h-2 md:h-3 rounded-sm bg-alert" />
+              <span className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[1px] text-white">
+                Spent
+              </span>
+            </div>
+            <div className="flex items-center gap-0.5 md:gap-1">
+              <div className="w-2 md:w-3 h-2 md:h-3 rounded-sm bg-income" />
+              <span className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[1px] text-white">
+                Income
+              </span>
+            </div>
+          </div>
+
+          <div className="h-[12px] md:h-[14px] rounded-[30px] overflow-hidden relative bg-income">
             <div
               className="absolute left-0 top-0 h-full bg-alert"
-              style={{ width: `${spentRatio}%`, borderRadius: "28px 0 0 28px" }}
+              style={{ width: `${spentRatio}%`, borderRadius: "27px 0 0 27px" }}
             />
             <div
-              className="absolute top-0 bottom-0 w-[2px] bg-ink"
+              className="absolute top-0 bottom-0 w-[2.5px] bg-transparent"
               style={{ left: `${spentRatio}%` }}
             />
           </div>
-          <div className="flex justify-end mt-1">
-            <span className="font-body text-[9px] font-semibold text-income-dark">
+
+          <div className="flex justify-between items-center gap-1 text-[8px] md:text-[10px]">
+            <p className="font-body font-semibold text-white leading-tight">
+              {formatCurrency(totalExpenses, "ILS")}
+            </p>
+            <p className="font-body text-[7px] md:text-[9px] font-semibold text-white/90 whitespace-nowrap">
               {formatCurrency(totalIncome - totalExpenses, "ILS")} left
-            </span>
+            </p>
+            <p className="font-body font-semibold text-white leading-tight">
+              {formatCurrency(totalIncome, "ILS")}
+            </p>
           </div>
         </div>
       </div>
 
       {/* ── Section 3: Chart ── */}
       <div
-        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-4 pt-3 pb-2 flex flex-col bg-base"
-        style={{ height: "clamp(190px, 32dvh, 280px)" }}
+        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-3 md:px-4 pt-2 md:pt-3 pb-1 md:pb-2 flex flex-col bg-base"
+        style={{ height: "clamp(140px, 24dvh, 240px)" }}
       >
         <div className="flex-1 min-h-0">
           <ChartSection
@@ -197,16 +221,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 3.5: Upcoming bills ── */}
-      <div className="flex-none">
-        <UpcomingBillsCard />
-      </div>
-
-      {/* ── Section 4: Transaction history (card scrolls internally) ── */}
-      <div className="flex-1 min-h-0 pb-[calc(80px+16px)]">
-        <TransactionHistory
+      {/* ── Section 4: Bills & Transactions (tabbed card) ── */}
+      <div className="flex-1 min-h-0 pb-[calc(60px+16px)]">
+        <BillsAndTransactionsCard
+          bills={bills}
           transactions={transactions}
-          onEdit={async (id, patch) => {
+          onTransactionEdit={async (id, patch) => {
             const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
               "transactions.update",
               { id, description: patch.description ?? undefined, amount: patch.amount },
@@ -215,7 +235,7 @@ export default function DashboardPage() {
               prev.map((t) => (t.id === id ? toTransaction(transaction) : t)),
             );
           }}
-          onDelete={async (id) => {
+          onTransactionDelete={async (id) => {
             await trpcMutate("transactions.delete", { id });
             setTransactions((prev) => prev.filter((t) => t.id !== id));
           }}

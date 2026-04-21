@@ -1,9 +1,5 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@jinsight/core";
-import { trpcQuery } from "@/lib/api";
 
 const CATEGORY_ICONS: Record<string, string> = {
   utilities: "⚡",
@@ -37,31 +33,7 @@ function statusFor(b: ApiBill) {
   return { label: `${d}d`, color: d <= 3 ? "text-reward-dark" : "text-muted" };
 }
 
-export function UpcomingBillsCard() {
-  const [bills, setBills] = useState<ApiBill[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await trpcQuery<{ bills: ApiBill[] }>("bills.list", {
-          status: "upcoming",
-          limit: 3,
-        });
-        setBills(data.bills);
-      } catch (err) {
-        console.error("Failed to load upcoming bills:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-    const onChanged = () => load();
-    window.addEventListener("jinsight:bill-changed", onChanged);
-    return () => window.removeEventListener("jinsight:bill-changed", onChanged);
-  }, []);
-
-  if (loading) return null;
+export function UpcomingBillsCard({ bills }: { bills: ApiBill[] }) {
 
   return (
     <div className="border-[2.5px] border-ink rounded-card shadow-neo-md bg-base px-4 py-3">

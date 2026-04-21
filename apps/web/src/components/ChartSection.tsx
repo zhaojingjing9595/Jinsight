@@ -37,13 +37,13 @@ export function ChartSection({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header: title + tab toggle ── */}
-      <div className="flex-none flex items-center justify-between mb-2">
-        {title ? (
+      {/* ── Header: title + tab toggle (same row) ── */}
+      <div className="flex-none flex items-center justify-between">
+        {title && (
           <h2 className="font-body text-[12px] font-black uppercase tracking-[1.5px] text-ink">
             {title}
           </h2>
-        ) : <span />}
+        )}
         <div className="flex gap-0.5 p-0.5 rounded-[10px] border-2 border-ink w-fit bg-ink">
           {(["pie", "bar"] as View[]).map((v) => (
             <button

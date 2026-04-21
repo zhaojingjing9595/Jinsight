@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Transaction } from "@jinsight/core";
 import { CATEGORY_META, formatCurrency } from "@jinsight/core";
 import { CategoryIcon } from "./CategoryIcon";
@@ -64,11 +65,19 @@ export function TransactionHistory({
 
   return (
     <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-y-auto no-scrollbar">
-      <h3 className="font-body sticky top-0 z-10 text-[12px] font-[900] uppercase tracking-[1.5px] text-ink px-4 pt-3 pb-2 bg-base">
-        Transactions
-      </h3>
+      <div className="sticky top-0 z-10 flex items-center justify-between px-3 md:px-4 pt-2 md:pt-3 pb-1.5 md:pb-2 bg-base">
+        <h3 className="font-body text-[11px] md:text-[12px] font-[900] uppercase tracking-[1.5px] text-ink">
+          Transactions
+        </h3>
+        <Link
+          href="/transactions"
+          className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1.5px] text-primary hover:underline"
+        >
+          View all →
+        </Link>
+      </div>
 
-      <div className="flex flex-col gap-2 px-3 py-3">
+      <div className="flex flex-col gap-1.5 md:gap-2 px-2.5 md:px-3 pb-2 md:pb-3">
         {sorted.map((t) => {
           const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
           const isExpense = t.type === "EXPENSE";
@@ -78,47 +87,44 @@ export function TransactionHistory({
           return (
             <div
               key={t.id}
-              className="flex flex-col gap-2 border-2 border-dashed border-ink/60 rounded-[12px] px-3 py-2 bg-base"
+              className="flex flex-col gap-1.5 md:gap-2 border-2 border-dashed border-ink/60 rounded-[10px] md:rounded-[12px] px-2.5 md:px-3 py-1.5 md:py-2 bg-base"
             >
-              <div className="flex items-center gap-3">
-                {/* Icon + category label */}
-                <div className="flex-none flex flex-col items-center w-10">
+              <div className="flex items-center gap-2.5 md:gap-3">
+                {/* Icon */}
+                <div className="flex-none">
                   <div
-                    className="w-9 h-9 rounded-[10px] border-2 border-ink flex items-center justify-center"
+                    className="w-8 md:w-9 h-8 md:h-9 rounded-[8px] md:rounded-[10px] border-2 border-ink flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: meta.color }}
                   >
-                    <CategoryIcon category={t.category} size={20} />
+                    <CategoryIcon category={t.category} size={18} />
                   </div>
-                  <span className="font-body mt-0.5 text-center leading-tight text-[8px] font-semibold text-[#666] max-w-[40px] break-words">
-                    {meta.label}
-                  </span>
                 </div>
 
                 {/* Description */}
-                <p className="font-body flex-1 min-w-0 truncate text-[13px] font-[600] text-ink">
+                <p className="font-body flex-1 min-w-0 truncate text-[12px] md:text-[13px] font-[600] text-ink">
                   {t.description ?? meta.label}
                 </p>
 
                 {/* Amount + datetime */}
-                <div className="flex-none text-right">
-                  <p className={`font-body text-[14px] font-[700] leading-tight ${isExpense ? "text-alert" : "text-income"}`}>
+                <div className="flex-none text-right whitespace-nowrap">
+                  <p className={`font-body text-[13px] md:text-[14px] font-[700] leading-tight ${isExpense ? "text-alert" : "text-income"}`}>
                     {isExpense ? "−" : "+"}{formatCurrency(t.amount, "ILS")}
                   </p>
-                  <p className="font-body mt-0.5 text-[9px] font-[500] text-[#999]">
+                  <p className="font-body mt-0.5 text-[8px] md:text-[9px] font-[500] text-[#999]">
                     {formatDateTime(t.date)}
                   </p>
                 </div>
 
                 {/* Actions: 3-dot menu */}
-                <div className="flex-none relative ml-1">
+                <div className="flex-none relative ml-0.5 md:ml-1">
                   <button
                     type="button"
                     aria-label="Transaction actions"
                     disabled={isPending}
                     onClick={() => setMenuId(menuId === t.id ? null : t.id)}
-                    className="w-6 h-6 flex items-center justify-center rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
+                    className="w-5 md:w-6 h-5 md:h-6 flex items-center justify-center rounded-[5px] md:rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
                   >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="#111008">
+                    <svg viewBox="0 0 24 24" width="14" height="14" className="md:w-[16px] md:h-[16px]" fill="#111008">
                       <circle cx="5" cy="12" r="1.8" />
                       <circle cx="12" cy="12" r="1.8" />
                       <circle cx="19" cy="12" r="1.8" />
