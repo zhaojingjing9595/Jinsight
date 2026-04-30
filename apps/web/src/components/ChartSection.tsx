@@ -27,7 +27,7 @@ export function ChartSection({
         </h2>
       )}
 
-      <div className="flex-1 min-h-0 flex items-center gap-2">
+      <div className="flex-1 min-h-0 flex items-center justify-center gap-3">
         {/* Donut chart */}
         <div className="flex-none h-full aspect-square">
           {slices.length > 0 ? (
@@ -40,17 +40,19 @@ export function ChartSection({
         </div>
 
         {/* Legend */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-[3px]">
+        <div className="flex-none w-[170px] md:w-[200px] min-w-0 flex flex-col justify-center gap-[3px]">
           {visibleSlices.map((s, i) => (
-            <div key={i} className="flex items-center gap-1.5 min-w-0">
-              <span
-                className="flex-none w-2 h-2 rounded-[3px] border border-ink/30"
-                style={{ backgroundColor: s.color }}
-              />
-              <span className="font-body text-[10px] font-[600] text-ink truncate flex-1 min-w-0">
-                {s.label}
+            <div key={i} className="grid grid-cols-2 gap-2 min-w-0 w-full">
+              <span className="min-w-0 flex items-center gap-2">
+                <span
+                  className="flex-none w-2 h-2 rounded-[3px] border border-ink/30"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="font-body text-[10px] font-[600] text-ink truncate">
+                  {s.label}
+                </span>
               </span>
-              <span className="font-body text-[10px] font-[700] text-ink flex-none">
+              <span className="font-body text-[10px] font-[700] text-ink tabular-nums justify-self-start">
                 {formatCurrency(s.amount, "ILS")}
               </span>
             </div>

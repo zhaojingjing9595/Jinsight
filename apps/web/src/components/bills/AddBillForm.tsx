@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { Category } from "@jinsight/core";
 import { trpcMutate } from "@/lib/api";
+import { CategoryPicker } from "@/components/CategoryPicker";
 
 type Recurrence = "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
 
@@ -12,13 +14,13 @@ const RECURRENCE_OPTIONS: { value: Recurrence; label: string }[] = [
   { value: "CUSTOM", label: "Custom" },
 ];
 
-const CATEGORY_OPTIONS: { value: string; label: string; icon: string }[] = [
-  { value: "utilities", label: "Utilities", icon: "⚡" },
-  { value: "subscriptions", label: "Subscription", icon: "📱" },
-  { value: "rent", label: "Rent", icon: "🏠" },
-  { value: "transport", label: "Transport", icon: "🚌" },
-  { value: "education", label: "Education", icon: "📚" },
-  { value: "other", label: "Other", icon: "📦" },
+const BILL_CATEGORIES: Category[] = [
+  "utilities",
+  "subscriptions",
+  "rent",
+  "transport",
+  "education",
+  "other",
 ];
 
 type Bill = {
@@ -54,7 +56,7 @@ export function AddBillForm({ initial, onSaved }: AddBillFormProps) {
   const [dueDate, setDueDate] = useState(
     initial?.dueDate ? new Date(initial.dueDate).toISOString().split("T")[0] : todayPlus(7),
   );
-  const [category, setCategory] = useState(initial?.category ?? "utilities");
+  const [category, setCategory] = useState<Category>((initial?.category as Category) ?? "utilities");
   const [recurrence, setRecurrence] = useState<Recurrence>(initial?.recurrence ?? "MONTHLY");
   const [isRecurring, setIsRecurring] = useState(initial?.isRecurring ?? true);
   const [isSubscription, setIsSubscription] = useState(initial?.isSubscription ?? false);
@@ -152,26 +154,12 @@ export function AddBillForm({ initial, onSaved }: AddBillFormProps) {
         <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
           Category
         </p>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORY_OPTIONS.map((c) => {
-            const active = category === c.value;
-            return (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCategory(c.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 border-2 border-ink rounded-pill font-body text-[12px] font-bold transition-all ${
-                  active
-                    ? "bg-primary text-white shadow-neo-xs"
-                    : "bg-base text-ink"
-                }`}
-              >
-                <span>{c.icon}</span>
-                {c.label}
-              </button>
-            );
-          })}
-        </div>
+        <CategoryPicker
+          value={category}
+          onChange={setCategory}
+          mode="expense"
+          categories={BILL_CATEGORIES}
+        />
       </div>
 
       <div>

@@ -167,11 +167,11 @@ export function BillsDetailSheet({
           {/* Bottom action bar */}
           <div className="flex-none border-t-2 border-ink/10 px-4 py-3">
             <Link
-              href="/bills"
+              href="/dashboard"
               onClick={onClose}
               className="block w-full py-2.5 text-center font-body text-[12px] font-bold uppercase tracking-[1.5px] text-primary border-2 border-ink rounded-btn shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
             >
-              Manage All Bills →
+              Back to Dashboard →
             </Link>
           </div>
         </div>

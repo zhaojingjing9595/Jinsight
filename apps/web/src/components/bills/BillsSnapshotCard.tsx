@@ -63,10 +63,10 @@ export function BillsSnapshotCard({ bills }: { bills: ApiBill[] }) {
                 Bills & Subscriptions
               </p>
               <Link
-                href="/bills"
+                href="/dashboard"
                 className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1.5px] text-primary hover:underline"
               >
-                View all →
+                Dashboard →
               </Link>
             </div>
             <div className="border-[2.5px] border-ink rounded-card shadow-neo-md bg-base px-3 md:px-4 py-2 md:py-3 text-center">
@@ -84,42 +84,42 @@ export function BillsSnapshotCard({ bills }: { bills: ApiBill[] }) {
                 Bills & Subscriptions
               </h2>
               <Link
-                href="/bills"
+                href="/dashboard"
                 onClick={(e) => e.stopPropagation()}
                 className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1.5px] text-primary hover:underline"
               >
-                View all →
+                Dashboard →
               </Link>
             </div>
 
             {/* Content: Left stats + Right bills */}
             <div className="flex gap-2 md:gap-3">
             {/* Left side: 2x2 stat cards */}
-            <div className="flex-1 grid grid-cols-2 gap-1">
-              <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-reward px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-ink">Upcoming</p>
-                <p className="font-display font-bold text-[12px] md:text-[14px] text-ink leading-none mt-0.5">
+            <div className="flex-1 grid grid-cols-2 gap-2 md:gap-3">
+              <div className="border border-ink rounded-[10px] md:rounded-[12px] shadow-neo-xs bg-reward px-2 md:px-3 py-4 md:py-6 flex flex-col items-center justify-center text-center">
+                <p className="font-body text-[10px] md:text-[12px] font-bold uppercase tracking-[0.5px] text-ink">Upcoming</p>
+                <p className="font-display font-bold text-[28px] md:text-[36px] text-ink leading-none mt-2">
                   {upcomingCount}
                 </p>
               </div>
 
-              <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-alert px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-white">Overdue</p>
-                <p className="font-display font-bold text-[12px] md:text-[14px] text-white leading-none mt-0.5">
+              <div className="border border-ink rounded-[10px] md:rounded-[12px] shadow-neo-xs bg-alert px-2 md:px-3 py-4 md:py-6 flex flex-col items-center justify-center text-center">
+                <p className="font-body text-[10px] md:text-[12px] font-bold uppercase tracking-[0.5px] text-white">Overdue</p>
+                <p className="font-display font-bold text-[28px] md:text-[36px] text-white leading-none mt-2">
                   {overdueCount}
                 </p>
               </div>
 
-              <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-income px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-ink">Paid</p>
-                <p className="font-display font-bold text-[12px] md:text-[14px] text-ink leading-none mt-0.5">
+              <div className="border border-ink rounded-[10px] md:rounded-[12px] shadow-neo-xs bg-income px-2 md:px-3 py-4 md:py-6 flex flex-col items-center justify-center text-center">
+                <p className="font-body text-[10px] md:text-[12px] font-bold uppercase tracking-[0.5px] text-ink">Paid</p>
+                <p className="font-display font-bold text-[28px] md:text-[36px] text-ink leading-none mt-2">
                   {paidCount}
                 </p>
               </div>
 
-              <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-primary px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-white">Total</p>
-                <p className="font-body text-[9px] md:text-[10px] font-bold text-white leading-none mt-0.5">
+              <div className="border border-ink rounded-[10px] md:rounded-[12px] shadow-neo-xs bg-primary px-2 md:px-3 py-4 md:py-6 flex flex-col items-center justify-center text-center">
+                <p className="font-body text-[10px] md:text-[12px] font-bold uppercase tracking-[0.5px] text-white">Total</p>
+                <p className="font-body text-[13px] md:text-[16px] font-bold text-white leading-none mt-2">
                   {formatCurrency(totalAmount, "ILS")}
                 </p>
               </div>

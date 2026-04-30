@@ -10,6 +10,7 @@ type CategoryPickerProps = {
   value: Category | null;
   onChange: (category: Category) => void;
   mode?: "expense" | "income";
+  categories?: Category[];
   onAddNew?: () => void;
 };
 
@@ -17,11 +18,12 @@ export function CategoryPicker({
   value,
   onChange,
   mode = "expense",
+  categories,
   onAddNew,
 }: CategoryPickerProps) {
-  const cats: Category[] = mode === "income"
+  const cats: Category[] = categories ?? (mode === "income"
     ? INCOME_CATEGORY_ORDER
-    : EXPENSE_CATEGORY_ORDER;
+    : EXPENSE_CATEGORY_ORDER);
 
   return (
     <div className="flex gap-3 overflow-x-auto pt-1.5 pb-2 pl-[5px]" style={{ scrollbarWidth: "none" }}>

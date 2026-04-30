@@ -42,16 +42,16 @@ export function UpcomingBillsCard({ bills }: { bills: ApiBill[] }) {
           Upcoming Bills
         </p>
         <Link
-          href="/bills"
+          href="/dashboard"
           className="font-body text-[10px] font-bold uppercase tracking-[1.5px] text-primary"
         >
-          View all →
+          Dashboard →
         </Link>
       </div>
 
       {bills.length === 0 ? (
         <Link
-          href="/bills"
+          href="/dashboard"
           className="block py-2 text-center font-body text-[12px] text-muted"
         >
           No bills yet — <span className="text-primary font-bold">add one</span>

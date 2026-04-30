@@ -7,6 +7,9 @@ import { AddModalProvider } from "@/contexts/AddModalContext";
 export const metadata: Metadata = {
   title: "Jinsight — The golden view of your finances",
   description: "Personal finance app combining income & expense tracking, shared accounts, goal saving, and emotionally intelligent insights.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

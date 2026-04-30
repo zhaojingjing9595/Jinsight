@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { CategoryIcon } from "./CategoryIcon";
-import { BillsDetailSheet } from "./bills/BillsDetailSheet";
+import { BillRow as BillsPageBillRow, daysUntil as billDaysUntil } from "@/components/bills/BillRow";
+import { AddBillModal } from "@/components/bills/AddBillModal";
 
 type ApiBill = {
   id: string;
@@ -12,7 +14,12 @@ type ApiBill = {
   amount: number;
   dueDate: string;
   category: string;
+  recurrence?: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+  isRecurring?: boolean;
+  isSubscription?: boolean;
+  reminderDays?: number;
   isPaid: boolean;
+  lastPaidDate?: string | null;
 };
 
 type EditPatch = { description: string | null; amount: number };
@@ -29,19 +36,47 @@ function daysUntil(dueDate: string): number {
   return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function BillsAndTransactionsCard({
-  bills,
+function isSameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function paidThisMonth(b: ApiBill, now = new Date()) {
+  if (!b.lastPaidDate) return Boolean(b.isPaid);
+  const paidAt = new Date(b.lastPaidDate);
+  if (Number.isNaN(paidAt.getTime())) return Boolean(b.isPaid);
+  return isSameMonth(paidAt, now);
+}
+
+type BillFilter = "all" | "upcoming" | "paid" | "overdue";
+const BILL_FILTERS: { value: BillFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "paid", label: "Paid" },
+  { value: "overdue", label: "Overdue" },
+];
+
+type TxFilter = "all" | Transaction["category"];
+
+function txCategories(transactions: Transaction[]) {
+  const uniq = new Set<Transaction["category"]>();
+  for (const t of transactions) uniq.add(t.category);
+  return Array.from(uniq).sort((a, b) => {
+    const al = CATEGORY_META[a]?.label ?? String(a);
+    const bl = CATEGORY_META[b]?.label ?? String(b);
+    return al.localeCompare(bl);
+  });
+}
+
+export function TransactionsCard({
   transactions,
   onTransactionEdit,
   onTransactionDelete,
 }: {
-  bills: ApiBill[];
   transactions: Transaction[];
   onTransactionEdit?: (id: string, patch: EditPatch) => Promise<void> | void;
   onTransactionDelete?: (id: string) => Promise<void> | void;
 }) {
-  const [tab, setTab] = useState<"transactions" | "bills">("transactions");
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [txFilter, setTxFilter] = useState<TxFilter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -53,6 +88,418 @@ export function BillsAndTransactionsCard({
       b.date.getTime() - a.date.getTime() ||
       b.createdAt.getTime() - a.createdAt.getTime(),
   );
+
+  const cats = useMemo(() => txCategories(transactions), [transactions]);
+  const visible = txFilter === "all" ? sorted : sorted.filter((t) => t.category === txFilter);
+
+  function startEdit(t: Transaction) {
+    setEditingId(t.id);
+    setEditDesc(t.description ?? "");
+    setEditAmount(String(t.amount));
+  }
+
+  async function saveEdit(id: string) {
+    const amount = parseFloat(editAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    setPendingId(id);
+    try {
+      await onTransactionEdit?.(id, { description: editDesc.trim() || null, amount });
+      setEditingId(null);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this transaction?")) return;
+    setPendingId(id);
+    try {
+      await onTransactionDelete?.(id);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  return (
+    <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-hidden flex flex-col">
+      <div className="flex-none flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 bg-base">
+        <h3 className="font-display font-black text-[14px] md:text-[16px] text-ink uppercase tracking-[1px]">
+          Transactions
+        </h3>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col h-full px-2.5 md:px-3 pb-3">
+          <div
+            className="flex-none flex gap-2 overflow-x-auto pt-1 pb-4 px-[5px] -mx-[5px]"
+            style={{ scrollbarWidth: "none" }}
+          >
+            <button
+              type="button"
+              onClick={() => setTxFilter("all")}
+              className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                txFilter === "all" ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+              }`}
+            >
+              All
+            </button>
+            {cats.map((cat) => {
+              const active = txFilter === cat;
+              const label = CATEGORY_META[cat]?.label ?? String(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setTxFilter(cat)}
+                  className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                    active ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-1 flex flex-col gap-1.5 md:gap-2">
+            {visible.length === 0 ? (
+              <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">
+                {sorted.length === 0 ? "No transactions yet" : "No transactions in this category"}
+              </p>
+            ) : (
+              visible.map((t) => {
+              const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
+              const isExpense = t.type === "EXPENSE";
+              const isEditing = editingId === t.id;
+              const isPending = pendingId === t.id;
+
+              return (
+                <div
+                  key={t.id}
+                  className="flex flex-col gap-1.5 md:gap-2 border-2 border-dashed border-ink/60 rounded-[10px] md:rounded-[12px] px-2.5 md:px-3 py-1.5 md:py-2 bg-base"
+                >
+                  <div className="flex items-center gap-2.5 md:gap-3">
+                    <div className="flex-none">
+                      <div
+                        className="w-8 md:w-9 h-8 md:h-9 rounded-[8px] md:rounded-[10px] border-2 border-ink flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: meta.color }}
+                      >
+                        <CategoryIcon category={t.category} size={18} />
+                      </div>
+                    </div>
+
+                    <p className="font-body flex-1 min-w-0 truncate text-[12px] md:text-[13px] font-[600] text-ink">
+                      {t.description ?? meta.label}
+                    </p>
+
+                    <div className="flex-none text-right whitespace-nowrap">
+                      <p className={`font-body text-[13px] md:text-[14px] font-[700] leading-tight ${isExpense ? "text-alert" : "text-income"}`}>
+                        {isExpense ? "−" : "+"}{formatCurrency(t.amount, "ILS")}
+                      </p>
+                      <p className="font-body mt-0.5 text-[8px] md:text-[9px] font-[500] text-[#999]">
+                        {formatDateTime(t.date)}
+                      </p>
+                    </div>
+
+                    <div className="flex-none relative ml-0.5 md:ml-1">
+                      <button
+                        type="button"
+                        aria-label="Transaction actions"
+                        disabled={isPending}
+                        onClick={() => setMenuId(menuId === t.id ? null : t.id)}
+                        className="w-5 md:w-6 h-5 md:h-6 flex items-center justify-center rounded-[5px] md:rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" className="md:w-[16px] md:h-[16px]" fill="#111008">
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+                      {menuId === t.id && (
+                        <>
+                          <button
+                            type="button"
+                            aria-label="Close menu"
+                            onClick={() => setMenuId(null)}
+                            className="fixed inset-0 z-20 cursor-default"
+                          />
+                          <div className="absolute right-0 top-7 z-30 flex flex-col min-w-[110px] border-2 border-ink rounded-[10px] shadow-neo-sm bg-base overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuId(null);
+                                isEditing ? setEditingId(null) : startEdit(t);
+                              }}
+                              className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-ink hover:bg-ink/5 text-left"
+                            >
+                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+                              </svg>
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuId(null);
+                                handleDelete(t.id);
+                              }}
+                              className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-alert hover:bg-alert/10 border-t border-ink/20 text-left"
+                            >
+                              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {isEditing && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-ink/20">
+                      <input
+                        type="text"
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                        placeholder="Description"
+                        className="font-body flex-1 min-w-0 text-[12px] px-2 py-1 border-2 border-ink rounded-[8px] bg-base focus:outline-none focus:shadow-neo-xs"
+                      />
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={editAmount}
+                        onChange={(e) => setEditAmount(e.target.value)}
+                        placeholder="Amount"
+                        className="font-body w-24 text-[12px] px-2 py-1 border-2 border-ink rounded-[8px] bg-base text-right focus:outline-none focus:shadow-neo-xs"
+                      />
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => saveEdit(t.id)}
+                        className="font-body text-[11px] font-[700] uppercase px-2.5 py-1 border-2 border-ink rounded-[8px] bg-reward shadow-neo-xs active:shadow-none active:translate-y-[1px] disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => setEditingId(null)}
+                        className="font-body text-[11px] font-[700] uppercase px-2.5 py-1 border-2 border-ink rounded-[8px] bg-base"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function BillsCard({
+  bills,
+  onBillMarkPaid,
+  onBillDelete,
+}: {
+  bills: ApiBill[];
+  onBillMarkPaid?: (id: string) => Promise<void> | void;
+  onBillDelete?: (id: string) => Promise<void> | void;
+}) {
+  const [billFilter, setBillFilter] = useState<BillFilter>("all");
+  const [billModalOpen, setBillModalOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<ApiBill | null>(null);
+
+  const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
+  const paidThisMonthAmount = bills.filter((b) => paidThisMonth(b)).reduce((sum, b) => sum + b.amount, 0);
+  const paidRatio = totalBillsAmount > 0 ? Math.min((paidThisMonthAmount / totalBillsAmount) * 100, 100) : 0;
+
+  const filteredBills = useMemo(() => {
+    const now = new Date();
+    return bills.filter((b) => {
+      const paidNow = paidThisMonth(b, now);
+      if (billFilter === "all") return true;
+      if (billFilter === "paid") return paidNow;
+      if (billFilter === "upcoming") return !paidNow && new Date(b.dueDate) >= now;
+      if (billFilter === "overdue") return !paidNow && new Date(b.dueDate) < now;
+      return true;
+    });
+  }, [bills, billFilter]);
+
+  const sortedBills = useMemo(() => {
+    return [...filteredBills]
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .sort((a, b) => Number(paidThisMonth(a)) - Number(paidThisMonth(b)))
+      .sort((a, b) => {
+        const ad = billDaysUntil(a.dueDate) < 0 && !paidThisMonth(a) ? -1 : 0;
+        const bd = billDaysUntil(b.dueDate) < 0 && !paidThisMonth(b) ? -1 : 0;
+        return ad - bd;
+      });
+  }, [filteredBills]);
+
+  function startBillEdit(id: string) {
+    const bill = bills.find((b) => b.id === id);
+    if (!bill) return;
+    setEditingBill(bill);
+    setBillModalOpen(true);
+  }
+
+  return (
+    <>
+      <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-hidden flex flex-col">
+        <div className="flex-none flex items-center justify-between px-3 md:px-4 py-3 md:py-4 bg-base">
+          <h3 className="font-display font-black text-[14px] md:text-[16px] text-ink uppercase tracking-[1px]">
+            Bills
+          </h3>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="w-full h-full px-3 md:px-4 py-1 md:py-2 flex flex-col overflow-hidden">
+            {/* Sticky header area */}
+            <div className="flex-none flex flex-col gap-2 md:gap-3 pb-2 bg-base">
+              <div className="border-2 border-ink rounded-card shadow-neo-xs bg-base px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-income border border-ink" />
+                      <span className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-ink">
+                        Paid
+                      </span>
+                    </span>
+                    <span className="font-body text-[10px] font-[800] text-ink">
+                      {formatCurrency(paidThisMonthAmount, "ILS")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-primary border border-ink" />
+                      <span className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-ink">
+                        Total
+                      </span>
+                    </span>
+                    <span className="font-body text-[10px] font-[800] text-ink">
+                      {formatCurrency(totalBillsAmount, "ILS")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2 h-[12px] rounded-[30px] overflow-hidden relative bg-primary">
+                  <div
+                    className="absolute left-0 top-0 h-full bg-income"
+                    style={{ width: `${paidRatio}%`, borderRadius: "27px 0 0 27px" }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setBillModalOpen(true)}
+                className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors text-center"
+              >
+                + Add new bill
+              </button>
+
+              <div
+                className="flex-none flex gap-2 overflow-x-auto pt-1 pb-2 px-[5px] -mx-[5px]"
+                style={{ scrollbarWidth: "none" }}
+              >
+                {BILL_FILTERS.map((f) => {
+                  const active = billFilter === f.value;
+                  return (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setBillFilter(f.value)}
+                      className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                        active ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Scrollable list only */}
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-3">
+              {sortedBills.length === 0 ? (
+                <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">
+                  No bills here.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {sortedBills.map((b) => (
+                    <BillsPageBillRow
+                      key={b.id}
+                      bill={b}
+                      onMarkPaid={onBillMarkPaid}
+                      onEdit={startBillEdit}
+                      onDelete={onBillDelete}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AddBillModal
+        open={billModalOpen}
+        initial={editingBill ?? undefined}
+        onClose={() => {
+          setBillModalOpen(false);
+          setEditingBill(null);
+        }}
+      />
+    </>
+  );
+}
+
+export function BillsAndTransactionsCard({
+  bills,
+  transactions,
+  onTransactionEdit,
+  onTransactionDelete,
+  onBillMarkPaid,
+  onBillDelete,
+}: {
+  bills: ApiBill[];
+  transactions: Transaction[];
+  onTransactionEdit?: (id: string, patch: EditPatch) => Promise<void> | void;
+  onTransactionDelete?: (id: string) => Promise<void> | void;
+  onBillMarkPaid?: (id: string) => Promise<void> | void;
+  onBillDelete?: (id: string) => Promise<void> | void;
+}) {
+  const [tab, setTab] = useState<"transactions" | "bills">("transactions");
+  const [txFilter, setTxFilter] = useState<TxFilter>("all");
+  const [billFilter, setBillFilter] = useState<BillFilter>("all");
+  const [billModalOpen, setBillModalOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<ApiBill | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDesc, setEditDesc] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+
+  const sorted = [...transactions].sort(
+    (a, b) =>
+      b.date.getTime() - a.date.getTime() ||
+      b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+
+  const txCats = useMemo(() => txCategories(transactions), [transactions]);
+  const visibleTx = txFilter === "all" ? sorted : sorted.filter((t) => t.category === txFilter);
 
   function startEdit(t: Transaction) {
     setEditingId(t.id);
@@ -83,24 +530,39 @@ export function BillsAndTransactionsCard({
   }
 
   // Bills data
-  const overdueCount = bills.filter((b) => !b.isPaid && daysUntil(b.dueDate) < 0).length;
-  const upcomingCount = bills.filter((b) => !b.isPaid && daysUntil(b.dueDate) >= 0).length;
-  const paidCount = bills.filter((b) => b.isPaid).length;
-  const totalAmount = bills.filter((b) => !b.isPaid).reduce((sum, b) => sum + b.amount, 0);
+  const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
+  const paidThisMonthAmount = bills.filter((b) => paidThisMonth(b)).reduce((sum, b) => sum + b.amount, 0);
+  const paidRatio = totalBillsAmount > 0 ? Math.min((paidThisMonthAmount / totalBillsAmount) * 100, 100) : 0;
 
-  const overdueBills = bills
-    .filter((b) => !b.isPaid && daysUntil(b.dueDate) < 0)
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  const filteredBills = useMemo(() => {
+    const now = new Date();
+    return bills.filter((b) => {
+      const paidNow = paidThisMonth(b, now);
+      if (billFilter === "all") return true;
+      if (billFilter === "paid") return paidNow;
+      if (billFilter === "upcoming") return !paidNow && new Date(b.dueDate) >= now;
+      if (billFilter === "overdue") return !paidNow && new Date(b.dueDate) < now;
+      return true;
+    });
+  }, [bills, billFilter]);
 
-  const upcomingBillsOnly = bills
-    .filter((b) => !b.isPaid && daysUntil(b.dueDate) >= 0)
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  const sortedBills = useMemo(() => {
+    return [...filteredBills]
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .sort((a, b) => Number(paidThisMonth(a)) - Number(paidThisMonth(b)))
+      .sort((a, b) => {
+        const ad = billDaysUntil(a.dueDate) < 0 && !paidThisMonth(a) ? -1 : 0;
+        const bd = billDaysUntil(b.dueDate) < 0 && !paidThisMonth(b) ? -1 : 0;
+        return ad - bd;
+      });
+  }, [filteredBills]);
 
-  const paidBillsOnly = bills
-    .filter((b) => b.isPaid)
-    .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
-
-  const displayBills = [...overdueBills, ...upcomingBillsOnly, ...paidBillsOnly].slice(0, 3);
+  function startBillEdit(id: string) {
+    const bill = bills.find((b) => b.id === id);
+    if (!bill) return;
+    setEditingBill(bill);
+    setBillModalOpen(true);
+  }
 
   return (
     <>
@@ -132,13 +594,49 @@ export function BillsAndTransactionsCard({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        <div
+          className="flex-1 min-h-0 no-scrollbar overflow-hidden"
+        >
           {tab === "transactions" ? (
-            <div className="flex flex-col gap-1.5 md:gap-2 px-2.5 md:px-3 py-2 md:py-3 pb-4">
-              {sorted.length === 0 ? (
-                <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">No transactions yet</p>
-              ) : (
-                sorted.map((t) => {
+            <div className="w-full h-full px-2.5 md:px-3 py-1 md:py-2 flex flex-col overflow-hidden">
+              <div
+                className="flex-none flex gap-2 overflow-x-auto pt-0 pb-4 px-[5px] -mx-[5px]"
+                style={{ scrollbarWidth: "none" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setTxFilter("all")}
+                  className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                    txFilter === "all" ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+                  }`}
+                >
+                  All
+                </button>
+                {txCats.map((cat) => {
+                  const active = txFilter === cat;
+                  const label = CATEGORY_META[cat]?.label ?? String(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setTxFilter(cat)}
+                      className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                        active ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-1 pb-3 flex flex-col gap-1.5 md:gap-2">
+                {visibleTx.length === 0 ? (
+                  <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">
+                    {sorted.length === 0 ? "No transactions yet" : "No transactions in this category"}
+                  </p>
+                ) : (
+                  visibleTx.map((t) => {
                   const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
                   const isExpense = t.type === "EXPENSE";
                   const isEditing = editingId === t.id;
@@ -267,83 +765,116 @@ export function BillsAndTransactionsCard({
                       )}
                     </div>
                   );
-                })
-              )}
+                  })
+                )}
+              </div>
             </div>
           ) : bills.length === 0 ? (
             <div className="flex items-center justify-center h-full text-center">
               <p className="font-body text-[11px] md:text-[12px] text-muted">No bills yet</p>
             </div>
           ) : (
-            <button
-              onClick={() => setDetailsOpen(true)}
-              className="w-full h-full p-3 md:p-4 flex flex-col gap-2 md:gap-3 hover:bg-ink/5 transition-colors"
-            >
-              <div className="grid grid-cols-2 gap-1 md:gap-2">
-                <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-reward px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                  <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-ink">Upcoming</p>
-                  <p className="font-display font-bold text-[12px] md:text-[14px] text-ink leading-none mt-0.5">
-                    {upcomingCount}
-                  </p>
+            <div className="w-full h-full px-3 md:px-4 py-1 md:py-2 flex flex-col overflow-hidden">
+              {/* Sticky header area */}
+              <div className="flex-none flex flex-col gap-2 md:gap-3 pb-2 bg-base">
+                <div className="border-2 border-ink rounded-card shadow-neo-xs bg-base px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-income border border-ink" />
+                        <span className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-ink">
+                          Paid
+                        </span>
+                      </span>
+                      <span className="font-body text-[10px] font-[800] text-ink">
+                        {formatCurrency(paidThisMonthAmount, "ILS")}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-primary border border-ink" />
+                        <span className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-ink">
+                          Total
+                        </span>
+                      </span>
+                      <span className="font-body text-[10px] font-[800] text-ink">
+                        {formatCurrency(totalBillsAmount, "ILS")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 h-[12px] rounded-[30px] overflow-hidden relative bg-primary">
+                    <div
+                      className="absolute left-0 top-0 h-full bg-income"
+                      style={{ width: `${paidRatio}%`, borderRadius: "27px 0 0 27px" }}
+                    />
+                  </div>
                 </div>
 
-                <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-alert px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                  <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-white">Overdue</p>
-                  <p className="font-display font-bold text-[12px] md:text-[14px] text-white leading-none mt-0.5">
-                    {overdueCount}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setBillModalOpen(true)}
+                  className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors text-center"
+                >
+                  + Add new bill
+                </button>
 
-                <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-income px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                  <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-ink">Paid</p>
-                  <p className="font-display font-bold text-[12px] md:text-[14px] text-ink leading-none mt-0.5">
-                    {paidCount}
-                  </p>
-                </div>
-
-                <div className="border border-ink rounded-[8px] md:rounded-[10px] shadow-neo-xs bg-primary px-1 md:px-1.5 py-1 md:py-1.5 flex flex-col items-center justify-center text-center">
-                  <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] text-white">Total</p>
-                  <p className="font-body text-[9px] md:text-[10px] font-bold text-white leading-none mt-0.5">
-                    {formatCurrency(totalAmount, "ILS")}
-                  </p>
+                <div
+                  className="flex-none flex gap-2 overflow-x-auto pt-1 pb-2 px-[5px] -mx-[5px]"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  {BILL_FILTERS.map((f) => {
+                    const active = billFilter === f.value;
+                    return (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => setBillFilter(f.value)}
+                        className={`font-body text-[11px] font-bold uppercase tracking-[1.5px] px-3 py-1.5 border-2 border-ink rounded-pill flex-none transition-all ${
+                          active ? "bg-ink text-base shadow-neo-xs" : "bg-base text-ink"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-0.5 md:gap-1">
-                {displayBills.length > 0 ? (
-                  displayBills.map((bill) => {
-                    const daysLeft = daysUntil(bill.dueDate);
-                    const isOverdue = daysLeft < 0;
-                    const statusLabel = isOverdue ? "Overdue" : "Upcoming";
-                    const statusColor = isOverdue ? "bg-alert text-white" : "bg-reward text-reward-dark";
-
-                    return (
-                      <div
-                        key={bill.id}
-                        className="grid grid-cols-3 gap-1 md:gap-1.5 items-center pb-0.5 md:pb-1 border-b border-ink/10 last:border-b-0"
-                      >
-                        <p className="font-body text-[10px] md:text-[11px] font-bold text-ink truncate text-start">{bill.name}</p>
-                        <div className={`px-1.5 md:px-2 py-0.5 rounded-pill border border-ink text-center w-fit ${statusColor}`}>
-                          <p className="font-body text-[7px] md:text-[8px] font-bold uppercase tracking-[0.5px] whitespace-nowrap">
-                            {isOverdue ? `${Math.abs(daysLeft)}d ${statusLabel}` : `${statusLabel}`}
-                          </p>
-                        </div>
-                        <p className="font-body text-[9px] md:text-[10px] font-bold text-ink text-right">
-                          {formatCurrency(bill.amount, "ILS")}
-                        </p>
-                      </div>
-                    );
-                  })
+              {/* Scrollable list only */}
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-3">
+                {sortedBills.length === 0 ? (
+                  <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">
+                    No bills here.
+                  </p>
                 ) : (
-                  <p className="font-body text-[9px] md:text-[10px] text-muted">No upcoming bills</p>
+                  <div className="flex flex-col gap-2">
+                    {sortedBills.map((b) => (
+                      <BillsPageBillRow
+                        key={b.id}
+                        bill={b}
+                        onMarkPaid={onBillMarkPaid}
+                        onEdit={startBillEdit}
+                        onDelete={onBillDelete}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
-            </button>
+            </div>
           )}
         </div>
       </div>
 
-      <BillsDetailSheet bills={bills} open={detailsOpen} onClose={() => setDetailsOpen(false)} />
+      <AddBillModal
+        open={billModalOpen}
+        initial={editingBill ?? undefined}
+        onClose={() => {
+          setBillModalOpen(false);
+          setEditingBill(null);
+        }}
+      />
     </>
   );
 }
