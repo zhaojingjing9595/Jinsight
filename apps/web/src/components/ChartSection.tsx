@@ -1,75 +1,67 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { formatCurrency } from "@jinsight/core";
 import { SpendingPieChart } from "./SpendingPieChart";
 import type { SliceData } from "./SpendingPieChart";
-import { MonthlyBarChart } from "./MonthlyBarChart";
-import type { MonthData } from "./MonthlyBarChart";
 
-type View = "pie" | "bar";
+const MAX_LEGEND_ITEMS = 5;
 
 export function ChartSection({
   slices,
   totalLabel,
-  monthlyData,
   title,
 }: {
   slices: SliceData[];
   totalLabel: string;
-  monthlyData: MonthData[];
+  monthlyData?: unknown[];
   title?: string;
 }) {
-  const [view, setView] = useState<View>("pie");
-  const touchStartX = useRef<number | null>(null);
-
-  function handleTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current === null) return;
-    const dx = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(dx) > 40) {
-      setView(dx > 0 ? "bar" : "pie");
-    }
-    touchStartX.current = null;
-  }
+  const visibleSlices = slices.slice(0, MAX_LEGEND_ITEMS);
+  const extraCount = slices.length - MAX_LEGEND_ITEMS;
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header: title + tab toggle (same row) ── */}
-      <div className="flex-none flex items-center justify-between">
-        {title && (
-          <h2 className="font-body text-[12px] font-black uppercase tracking-[1.5px] text-ink">
-            {title}
-          </h2>
-        )}
-        <div className="flex gap-0.5 p-0.5 rounded-[10px] border-2 border-ink w-fit bg-ink">
-          {(["pie", "bar"] as View[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`font-body px-3 py-[3px] rounded-[7px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-colors ${
-                view === v ? "bg-reward text-ink" : "bg-transparent text-base"
-              }`}
-            >
-              {v === "pie" ? "Breakdown" : "6-Month"}
-            </button>
-          ))}
-        </div>
-      </div>
+      {title && (
+        <h2 className="flex-none font-body text-[12px] font-black uppercase tracking-[1.5px] text-ink mb-1">
+          {title}
+        </h2>
+      )}
 
-      {/* ── Chart area (swipeable) ── */}
-      <div
-        className="flex-1 min-h-0"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        {view === "pie" ? (
-          <SpendingPieChart slices={slices} totalLabel={totalLabel} />
-        ) : (
-          <MonthlyBarChart months={monthlyData} />
-        )}
+      <div className="flex-1 min-h-0 flex items-center gap-2">
+        {/* Donut chart */}
+        <div className="flex-none h-full aspect-square">
+          {slices.length > 0 ? (
+            <SpendingPieChart slices={slices} totalLabel={totalLabel} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="font-body text-[10px] text-muted text-center">No spending yet</p>
+            </div>
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-[3px]">
+          {visibleSlices.map((s, i) => (
+            <div key={i} className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="flex-none w-2 h-2 rounded-[3px] border border-ink/30"
+                style={{ backgroundColor: s.color }}
+              />
+              <span className="font-body text-[10px] font-[600] text-ink truncate flex-1 min-w-0">
+                {s.label}
+              </span>
+              <span className="font-body text-[10px] font-[700] text-ink flex-none">
+                {formatCurrency(s.amount, "ILS")}
+              </span>
+            </div>
+          ))}
+          {extraCount > 0 && (
+            <p className="font-body text-[9px] text-muted mt-0.5">+{extraCount} more</p>
+          )}
+          {slices.length === 0 && (
+            <p className="font-body text-[10px] text-muted">Add transactions to see a breakdown</p>
+          )}
+        </div>
       </div>
     </div>
   );

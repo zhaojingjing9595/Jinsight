@@ -66,6 +66,10 @@ export const accountsRouter = router({
         id: z.string(),
         name: z.string().min(1).optional(),
         balance: z.number().optional(),
+        openingBalance: z.number().optional(),
+        openingBalanceSources: z
+          .array(z.object({ label: z.string(), amount: z.number() }))
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

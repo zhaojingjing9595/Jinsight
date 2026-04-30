@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { formatCurrency, CATEGORY_META } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { CategoryIcon } from "./CategoryIcon";
@@ -105,43 +104,37 @@ export function BillsAndTransactionsCard({
 
   return (
     <>
-      <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-y-auto no-scrollbar flex flex-col">
+      <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-hidden flex flex-col">
         {/* Tab header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-3 md:px-4 pt-2 md:pt-3 pb-1.5 md:pb-2 bg-base border-b-[2px] border-ink/20">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-3 md:px-4 py-3 md:py-4 bg-base">
           <div className="flex gap-2">
             <button
               onClick={() => setTab("transactions")}
-              className={`font-body text-[11px] md:text-[12px] font-[900] uppercase tracking-[1.5px] pb-1 border-b-[3px] transition-colors ${
+              className={`font-body px-3 py-1.5 border-2 border-ink rounded-[10px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-all active:shadow-none active:translate-x-[1px] active:translate-y-[1px] ${
                 tab === "transactions"
-                  ? "text-ink border-ink"
-                  : "text-muted border-transparent hover:text-ink"
+                  ? "bg-primary text-white shadow-neo-sm -translate-x-px -translate-y-px"
+                  : "bg-base text-ink shadow-[2px_2px_0_#111008]"
               }`}
             >
               Transactions
             </button>
             <button
               onClick={() => setTab("bills")}
-              className={`font-body text-[11px] md:text-[12px] font-[900] uppercase tracking-[1.5px] pb-1 border-b-[3px] transition-colors ${
+              className={`font-body px-3 py-1.5 border-2 border-ink rounded-[10px] text-[10px] font-[700] uppercase tracking-[0.8px] transition-all active:shadow-none active:translate-x-[1px] active:translate-y-[1px] ${
                 tab === "bills"
-                  ? "text-ink border-ink"
-                  : "text-muted border-transparent hover:text-ink"
+                  ? "bg-primary text-white shadow-neo-sm -translate-x-px -translate-y-px"
+                  : "bg-base text-ink shadow-[2px_2px_0_#111008]"
               }`}
             >
               Bills
             </button>
           </div>
-          <Link
-            href={tab === "transactions" ? "/transactions" : "/bills"}
-            className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1.5px] text-primary hover:underline"
-          >
-            View all →
-          </Link>
         </div>
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
           {tab === "transactions" ? (
-            <div className="flex flex-col gap-1.5 md:gap-2 px-2.5 md:px-3 py-2 md:py-3">
+            <div className="flex flex-col gap-1.5 md:gap-2 px-2.5 md:px-3 py-2 md:py-3 pb-4">
               {sorted.length === 0 ? (
                 <p className="font-body text-[11px] md:text-[12px] text-muted text-center py-4">No transactions yet</p>
               ) : (

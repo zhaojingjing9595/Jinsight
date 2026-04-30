@@ -6,6 +6,7 @@ import type { Category, TransactionType } from "@jinsight/core";
 import { NumPad } from "@/components/NumPad";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { TypeToggle } from "@/components/TypeToggle";
+import { DateStrip } from "@/components/DateStrip";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 
 type AddTransactionFormProps = {
@@ -82,6 +83,8 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
         <TypeToggle value={type} onChange={(t) => { setType(t); setCategory(null); }} />
       </div>
 
+      <DateStrip value={date} onChange={setDate} />
+
       <div>
         <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
           Category
@@ -156,18 +159,6 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
 
       {showMore && (
         <div className="flex flex-col gap-3">
-          <div>
-            <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
-              Date
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="font-body w-full px-3 py-2 text-[13px] border-2 border-ink rounded-btn bg-base focus:outline-none focus:border-primary"
-            />
-          </div>
-
           <div className="flex items-center justify-between">
             <span className="font-body text-[12px] font-bold text-ink">
               Recurring

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAddModal } from "@/contexts/AddModalContext";
 
-type NavItem = "home" | "plan" | "add" | "story" | "profile";
+type NavItem = "home" | "plan" | "add" | "history" | "profile";
 
 type BottomNavProps = {
   active?: NavItem;
@@ -13,7 +13,7 @@ const NAV_ICON_PATHS: Record<NavItem, string[]> = {
   home: ["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z", "M9 22V12h6v10"],
   plan: ["M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2", "M9 5a2 2 0 012-2h2a2 2 0 012 2v0a2 2 0 01-2 2h-2a2 2 0 01-2-2z", "M9 14l2 2 4-4"],
   add: ["M12 5v14", "M5 12h14"],
-  story: ["M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z", "M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"],
+  history: ["M3 20v-8", "M9 20V8", "M15 20V4", "M21 20v-6"],
   profile: ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 3a4 4 0 100 8 4 4 0 000-8z"],
 };
 
@@ -27,11 +27,11 @@ function NavIcon({ id, size = 18 }: { id: NavItem; size?: number }) {
 }
 
 const NAV_ITEMS: { id: NavItem; label: string; href: string }[] = [
-  { id: "home",    label: "HOME",  href: "/dashboard" },
-  { id: "plan",    label: "PLANS", href: "/plans" },
-  { id: "add",     label: "ADD",   href: "/add" },
-  { id: "story",   label: "STORY", href: "/story" },
-  { id: "profile", label: "ME",    href: "/profile" },
+  { id: "home",    label: "HOME",    href: "/dashboard" },
+  { id: "plan",    label: "PLANS",   href: "/plans" },
+  { id: "add",     label: "ADD",     href: "/add" },
+  { id: "history", label: "HISTORY", href: "/history" },
+  { id: "profile", label: "ME",      href: "/profile" },
 ];
 
 export function BottomNav({ active }: BottomNavProps) {

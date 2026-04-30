@@ -6,6 +6,7 @@ import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
 import { BillsAndTransactionsCard } from "@/components/BillsAndTransactionsCard";
+import { BalanceEditModal } from "@/components/BalanceEditModal";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 
 type ApiTransaction = {
@@ -32,7 +33,6 @@ function toTransaction(t: ApiTransaction): Transaction {
 const now = new Date();
 const currentMonth = now.getMonth() + 1;
 const currentYear = now.getFullYear();
-const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
 type ApiBill = {
   id: string;
@@ -43,17 +43,27 @@ type ApiBill = {
   isPaid: boolean;
 };
 
+type ApiAccount = {
+  id: string;
+  balance: number;
+  openingBalance: number | null;
+  openingBalanceSources: { label: string; amount: number }[] | null;
+};
+
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [account, setAccount] = useState<ApiAccount | null>(null);
   const [balance, setBalance] = useState(0);
+  const [openingBalance, setOpeningBalance] = useState<number | null>(null);
   const [bills, setBills] = useState<ApiBill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         const me = await trpcQuery<{
-          user: { accounts: { id: string; balance: number }[] };
+          user: { accounts: ApiAccount[] };
         }>("users.me");
 
         if (!me.user.accounts?.length) {
@@ -61,12 +71,14 @@ export default function DashboardPage() {
           return;
         }
 
-        const account = me.user.accounts[0];
-        setBalance(account.balance);
+        const acct = me.user.accounts[0];
+        setAccount(acct);
+        setBalance(acct.balance);
+        setOpeningBalance(acct.openingBalance ?? null);
 
         const [txData, billsData] = await Promise.all([
           trpcQuery<{ transactions: ApiTransaction[] }>("transactions.list", {
-            accountId: account.id,
+            accountId: acct.id,
             month: currentMonth,
             year: currentYear,
             limit: 50,
@@ -100,7 +112,12 @@ export default function DashboardPage() {
   const totalExpenses = transactions
     .filter((t) => t.type === "EXPENSE")
     .reduce((sum, t) => sum + t.amount, 0);
-  const monthBalance = totalIncome - totalExpenses;
+
+  // If opening balance is set, derive current display balance from it
+  const displayBalance = openingBalance != null
+    ? openingBalance + totalIncome - totalExpenses
+    : balance;
+
   const spentRatio = totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0;
 
   const categoryTotals = transactions
@@ -116,14 +133,6 @@ export default function DashboardPage() {
 
   const pieSlices = Object.values(categoryTotals).sort((a, b) => b.amount - a.amount);
 
-  const monthlyData = [
-    {
-      month: now.toLocaleDateString("en-US", { month: "short" }),
-      income: totalIncome,
-      spent: totalExpenses,
-    },
-  ];
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center max-w-[480px] mx-auto bg-base h-dvh">
@@ -134,23 +143,26 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh gap-2 md:gap-3 pt-4 md:pt-6 pb-0">
+    <div className="flex flex-col overflow-hidden max-w-[480px] mx-auto px-4 bg-base h-dvh gap-3 md:gap-4 pt-4 md:pt-6 pb-0">
       {/* ── Section 1: Balance + Income vs Spent (combined) ── */}
-      <div className="flex-none border-[2.5px] border-ink rounded-[18px] shadow-neo-lg px-4 md:px-5 py-2 md:py-3 flex flex-col gap-1 bg-primary">
-        {/* Month selector + Header */}
+      <div className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-lg px-4 md:px-5 py-3 md:py-4 flex flex-col gap-1.5 bg-primary">
+        {/* Header row: label + edit button */}
         <div className="flex items-center justify-between">
           <p className="font-body text-[8px] md:text-[9px] font-bold uppercase tracking-[2.5px] text-white/80">
             Total Balance
           </p>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <button className="text-white text-[14px] md:text-[16px] leading-none">←</button>
-            <div className="px-2 md:px-3 py-0.5 md:py-1 rounded-pill bg-white/15 border border-white/30">
-              <span className="font-body text-[9px] md:text-[10px] font-bold uppercase tracking-[1px] text-white">
-                {now.toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
-              </span>
-            </div>
-            <button className="text-white text-[14px] md:text-[16px] leading-none">→</button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setBalanceModalOpen(true)}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-pill bg-white/15 border border-white/30 hover:bg-white/25 transition-colors"
+            aria-label="Edit balance"
+          >
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+            <span className="font-body text-[9px] font-bold uppercase tracking-[1px] text-white">Edit</span>
+          </button>
         </div>
 
         {/* Balance */}
@@ -159,7 +171,7 @@ export default function DashboardPage() {
             className="font-display font-bold leading-none text-white tracking-[0.01em]"
             style={{ fontSize: "clamp(28px, 4dvh, 48px)" }}
           >
-            {formatCurrency(balance, "ILS")}
+            {formatCurrency(displayBalance, "ILS")}
           </h1>
         </div>
 
@@ -207,22 +219,20 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Section 3: Chart ── */}
-      <div
-        className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-3 md:px-4 pt-2 md:pt-3 pb-1 md:pb-2 flex flex-col bg-base"
-        style={{ height: "clamp(140px, 24dvh, 240px)" }}
+      <div className="flex-none border-[2.5px] border-ink rounded-card shadow-neo-md px-3 md:px-4 pt-2 md:pt-3 pb-2 md:pb-3 flex flex-col bg-base"
+        style={{ height: "clamp(150px, 22dvh, 220px)" }}
       >
         <div className="flex-1 min-h-0">
           <ChartSection
             title="Where It Went"
             slices={pieSlices}
             totalLabel={formatCurrency(totalExpenses, "ILS")}
-            monthlyData={monthlyData}
           />
         </div>
       </div>
 
       {/* ── Section 4: Bills & Transactions (tabbed card) ── */}
-      <div className="flex-1 min-h-0 pb-[calc(60px+16px)]">
+      <div className="flex-1 min-h-0">
         <BillsAndTransactionsCard
           bills={bills}
           transactions={transactions}
@@ -242,7 +252,28 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Nav spacer — same gap as between cards, pushed down by nav height */}
+      <div className="flex-none h-[69px]" />
+
       <BottomNav active="home" />
+
+      {account && (
+        <BalanceEditModal
+          open={balanceModalOpen}
+          onClose={() => setBalanceModalOpen(false)}
+          accountId={account.id}
+          currentBalance={balance}
+          currentOpeningBalance={openingBalance}
+          currentSources={account.openingBalanceSources}
+          totalIncome={totalIncome}
+          totalExpenses={totalExpenses}
+          onSaved={(newBalance, newOpeningBalance) => {
+            setBalance(newBalance);
+            setOpeningBalance(newOpeningBalance);
+            setAccount((prev) => prev ? { ...prev, balance: newBalance, openingBalance: newOpeningBalance } : prev);
+          }}
+        />
+      )}
     </div>
   );
 }

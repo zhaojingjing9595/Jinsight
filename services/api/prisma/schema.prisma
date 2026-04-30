@@ -78,16 +78,18 @@ model User {
 }
 
 model Account {
-  id           String          @id @default(uuid())
-  userId       String
-  name         String
-  type         AccountType     @default(PERSONAL)
-  balance      Float           @default(0)
-  createdAt    DateTime        @default(now())
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  members      AccountMember[]
-  budgets      Budget[]
+  id                    String          @id @default(uuid())
+  userId                String
+  name                  String
+  type                  AccountType     @default(PERSONAL)
+  balance               Float           @default(0)
+  openingBalance        Float?
+  openingBalanceSources Json?
+  createdAt             DateTime        @default(now())
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  members               AccountMember[]
+  budgets               Budget[]
 }
 
 model AccountMember {
