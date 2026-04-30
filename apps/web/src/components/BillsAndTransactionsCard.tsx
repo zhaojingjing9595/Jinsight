@@ -131,7 +131,7 @@ export function TransactionsCard({
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="flex flex-col h-full px-2.5 md:px-3 pb-3">
           <div
-            className="flex-none flex gap-2 overflow-x-auto pt-1 pb-4 px-[5px] -mx-[5px]"
+            className="flex-none flex gap-2 overflow-x-auto pt-1 md:pt-2 pb-4 px-[5px] -mx-[5px]"
             style={{ scrollbarWidth: "none" }}
           >
             <button
@@ -355,7 +355,7 @@ export function BillsCard({
   return (
     <>
       <div className="h-full border-[2.5px] border-ink rounded-card shadow-neo-md bg-base overflow-hidden flex flex-col">
-        <div className="flex-none flex items-center justify-between px-3 md:px-4 py-3 md:py-4 bg-base">
+        <div className="flex-none flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 bg-base">
           <h3 className="font-display font-black text-[14px] md:text-[16px] text-ink uppercase tracking-[1px]">
             Bills
           </h3>
