@@ -251,6 +251,8 @@ export default function DashboardPage() {
           <BillsAndTransactionsCard
             bills={bills}
             transactions={transactions}
+            transactionsListMonth={currentMonth}
+            transactionsListYear={currentYear}
             onTransactionEdit={async (id, patch) => {
               const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
                 "transactions.update",
@@ -278,7 +280,10 @@ export default function DashboardPage() {
         {/* Desktop: split cards */}
         <div className="hidden md:grid md:grid-cols-2 gap-4 h-full">
           <TransactionsCard
+            bills={bills}
             transactions={transactions}
+            transactionsListMonth={currentMonth}
+            transactionsListYear={currentYear}
             onTransactionEdit={async (id, patch) => {
               const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
                 "transactions.update",
@@ -322,10 +327,19 @@ export default function DashboardPage() {
           currentSources={account.openingBalanceSources}
           totalIncome={totalIncome}
           totalExpenses={totalExpenses}
-          onSaved={(newBalance, newOpeningBalance) => {
+          onSaved={(newBalance, newOpeningBalance, openingBalanceSources) => {
             setBalance(newBalance);
             setOpeningBalance(newOpeningBalance);
-            setAccount((prev) => prev ? { ...prev, balance: newBalance, openingBalance: newOpeningBalance } : prev);
+            setAccount((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    balance: newBalance,
+                    openingBalance: newOpeningBalance,
+                    openingBalanceSources,
+                  }
+                : prev,
+            );
           }}
         />
       )}

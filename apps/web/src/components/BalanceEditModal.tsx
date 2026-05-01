@@ -15,7 +15,11 @@ type Props = {
   currentSources: { label: string; amount: number }[] | null;
   totalIncome: number;
   totalExpenses: number;
-  onSaved: (newBalance: number, newOpeningBalance: number) => void;
+  onSaved: (
+    newBalance: number,
+    newOpeningBalance: number,
+    openingBalanceSources: { label: string; amount: number }[],
+  ) => void;
 };
 
 type Mode = "opening" | "current";
@@ -99,7 +103,7 @@ export function BalanceEditModal({
         openingBalanceSources: parsedSources,
       });
 
-      onSaved(newBalance, newOpeningBalance);
+      onSaved(newBalance, newOpeningBalance, parsedSources);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save. Try again.");

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AddModalProvider } from "@/contexts/AddModalContext";
 
 // Google Fonts loaded as <link> to avoid CSS @import ordering issues with Tailwind v4
 
@@ -28,7 +27,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AddModalProvider>{children}</AddModalProvider>
+        {children}
       </body>
     </html>
   );

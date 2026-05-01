@@ -8,6 +8,7 @@ import { CategoryPicker } from "@/components/CategoryPicker";
 import { TypeToggle } from "@/components/TypeToggle";
 import { DateStrip } from "@/components/DateStrip";
 import { trpcQuery, trpcMutate } from "@/lib/api";
+import { formatLocalDateKey, dateKeyToUtcDatetimeISO } from "@/lib/dates";
 
 type AddTransactionFormProps = {
   onSaved?: () => void;
@@ -18,9 +19,7 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState<Category | null>(null);
   const [name, setName] = useState("");
-  const [showMore, setShowMore] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [date, setDate] = useState(() => formatLocalDateKey(new Date()));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -35,6 +34,12 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
   const displayAmount = formatCurrency(parseFloat(amount) || 0, "ILS");
   const isExpense = type === "EXPENSE";
 
+  useEffect(() => {
+    if (type !== "EXPENSE") return;
+    const todayKey = formatLocalDateKey(new Date());
+    if (date > todayKey) setDate(todayKey);
+  }, [type, date]);
+
   async function handleSave() {
     if (!accountId || saving) return;
 
@@ -47,8 +52,8 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
         type,
         category: category ?? "other",
         description: name || undefined,
-        date: new Date(date).toISOString(),
-        isRecurring,
+        date: dateKeyToUtcDatetimeISO(date),
+        isRecurring: false,
       });
 
       window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
@@ -59,7 +64,6 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
         setAmount("0");
         setCategory(null);
         setName("");
-        setIsRecurring(false);
         onSaved?.();
       }, 900);
     } catch (err) {
@@ -79,11 +83,11 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
         </div>
       )}
 
+      <DateStrip value={date} onChange={setDate} allowFutureDates={!isExpense} />
+
       <div className="flex justify-center">
         <TypeToggle value={type} onChange={(t) => { setType(t); setCategory(null); }} />
       </div>
-
-      <DateStrip value={date} onChange={setDate} />
 
       <div>
         <p className="font-body text-[10px] font-bold uppercase tracking-[2px] mb-2 text-ink">
@@ -140,42 +144,6 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
             onChange={setCategory}
             mode={isExpense ? "expense" : "income"}
           />
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setShowMore((v) => !v)}
-        className="font-body flex items-center gap-2 text-[11px] font-bold uppercase tracking-[1.5px] text-muted self-start"
-      >
-        <span
-          className="inline-block transition-transform duration-150"
-          style={{ transform: showMore ? "rotate(90deg)" : "none" }}
-        >
-          ▶
-        </span>
-        {showMore ? "Less options" : "More options"}
-      </button>
-
-      {showMore && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="font-body text-[12px] font-bold text-ink">
-              Recurring
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsRecurring((v) => !v)}
-              className={`relative w-[46px] h-[26px] border-2 border-ink rounded-pill shadow-neo-xs transition-all ${
-                isRecurring ? "bg-primary" : "bg-[#d4d4d4]"
-              }`}
-            >
-              <span
-                className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white border-[1.5px] border-ink transition-all"
-                style={{ left: isRecurring ? "22px" : "3px" }}
-              />
-            </button>
-          </div>
         </div>
       )}
 

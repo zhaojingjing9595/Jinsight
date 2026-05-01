@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useAddModal } from "@/contexts/AddModalContext";
 
 type NavItem = "home" | "plan" | "add" | "history" | "profile";
 
@@ -35,8 +34,6 @@ const NAV_ITEMS: { id: NavItem; label: string; href: string }[] = [
 ];
 
 export function BottomNav({ active }: BottomNavProps) {
-  const { open } = useAddModal();
-
   return (
     <nav className="fixed bottom-3 left-4 right-4 flex items-center justify-around px-4 py-1 border-[2.5px] border-ink shadow-neo-md z-50 bg-base rounded-full">
       {NAV_ITEMS.map((item) => {
@@ -68,24 +65,11 @@ export function BottomNav({ active }: BottomNavProps) {
           </>
         );
 
-        if (isAdd) {
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={open}
-              aria-label="Add transaction"
-              className="flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center"
-            >
-              {inner}
-            </button>
-          );
-        }
-
         return (
           <Link
             key={item.id}
             href={item.href}
+            aria-label={isAdd ? "Add — transaction, budget, or bill" : item.label}
             className="flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center"
           >
             {inner}

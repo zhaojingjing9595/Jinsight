@@ -25,8 +25,9 @@ export const transactionsRouter = router({
 
       const dateFilter: { gte?: Date; lt?: Date } = {};
       if (input.month && input.year) {
-        dateFilter.gte = new Date(input.year, input.month - 1, 1);
-        dateFilter.lt = new Date(input.year, input.month, 1);
+        // UTC month boundaries so list matches client calendar dates saved as UTC midnights
+        dateFilter.gte = new Date(Date.UTC(input.year, input.month - 1, 1, 0, 0, 0, 0));
+        dateFilter.lt = new Date(Date.UTC(input.year, input.month, 1, 0, 0, 0, 0));
       }
 
       const transactions = await ctx.prisma.transaction.findMany({
