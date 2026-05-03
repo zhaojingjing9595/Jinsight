@@ -9,7 +9,7 @@ const TABS: { id: AddTab; label: string; href: string }[] = [
 
 export function AddSwitcher({ active }: { active: AddTab }) {
   return (
-    <div className="flex-none flex gap-2 px-4 pt-5 pb-3">
+    <div className="flex-none flex gap-2 px-4 pt-1 pb-3">
       {TABS.map((tab) => {
         const isActive = tab.id === active;
         const inner = (

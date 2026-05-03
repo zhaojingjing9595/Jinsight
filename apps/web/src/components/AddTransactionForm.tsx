@@ -76,7 +76,7 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {saveError && (
         <div className="bg-alert/10 border-2 border-alert rounded-btn px-3 py-2 text-[12px] font-body font-[700] text-alert whitespace-pre-wrap">
           {saveError}

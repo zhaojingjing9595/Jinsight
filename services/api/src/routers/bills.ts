@@ -21,6 +21,23 @@ function rollForward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | "
   }
 }
 
+function rollBackward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"): Date {
+  const d = new Date(date);
+  switch (recurrence) {
+    case "WEEKLY":
+      d.setDate(d.getDate() - 7);
+      return d;
+    case "ANNUAL":
+      d.setFullYear(d.getFullYear() - 1);
+      return d;
+    case "MONTHLY":
+    case "CUSTOM":
+    default:
+      d.setMonth(d.getMonth() - 1);
+      return d;
+  }
+}
+
 export const billsRouter = router({
   list: protectedProcedure
     .input(
@@ -145,15 +162,80 @@ export const billsRouter = router({
         const nextDue = rollForward(existing.dueDate, existing.recurrence);
         const bill = await ctx.prisma.bill.update({
           where: { id: input.id },
-          data: { lastPaidDate: now, dueDate: nextDue, isPaid: false },
+          data: {
+            lastPaidDate: now,
+            lastPaidAmount: null,
+            dueDate: nextDue,
+            isPaid: false,
+          },
         });
         return { bill };
       }
 
       const bill = await ctx.prisma.bill.update({
         where: { id: input.id },
-        data: { isPaid: true, lastPaidDate: now },
+        data: { isPaid: true, lastPaidDate: now, lastPaidAmount: null },
       });
+      return { bill };
+    }),
+
+  /** Overrides amount shown for the latest payment row only; does not change recurring bill template `amount`. */
+  updatePaymentAmount: protectedProcedure
+    .input(z.object({ id: z.string(), amount: z.number().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
+      }
+
+      if (!existing.lastPaidDate) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Bill has no payment to edit" });
+      }
+
+      const bill = await ctx.prisma.bill.update({
+        where: { id: input.id },
+        data: { lastPaidAmount: input.amount },
+      });
+
+      return { bill };
+    }),
+
+  /** Clears last payment — bill becomes unpaid and recurring due date rolls back one period if applicable. */
+  revertPayment: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
+      if (!existing || existing.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
+      }
+
+      if (!existing.lastPaidDate) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No payment to revert" });
+      }
+
+      if (existing.isRecurring) {
+        const prevDue = rollBackward(existing.dueDate, existing.recurrence);
+        const bill = await ctx.prisma.bill.update({
+          where: { id: input.id },
+          data: {
+            lastPaidDate: null,
+            lastPaidAmount: null,
+            dueDate: prevDue,
+            isPaid: false,
+          },
+        });
+        return { bill };
+      }
+
+      const bill = await ctx.prisma.bill.update({
+        where: { id: input.id },
+        data: {
+          isPaid: false,
+          lastPaidDate: null,
+          lastPaidAmount: null,
+        },
+      });
+
       return { bill };
     }),
 

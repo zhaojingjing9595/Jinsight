@@ -20,7 +20,15 @@ type ApiBill = {
   reminderDays?: number;
   isPaid: boolean;
   lastPaidDate?: string | null;
+  /** Shown amount for latest payment row; omit/null → use template `amount`. */
+  lastPaidAmount?: number | null;
 };
+
+function billPaymentDisplayAmount(b: ApiBill): number {
+  const o = b.lastPaidAmount;
+  if (o != null && typeof o === "number" && !Number.isNaN(o)) return o;
+  return b.amount;
+}
 
 type EditPatch = { description: string | null; amount: number };
 
@@ -117,10 +125,35 @@ function mergedItemCategory(it: TxListMergedItem): Transaction["category"] {
 
 function TxListMergedRowBill({
   item,
+  billActionsEnabled,
+  editingBillPaymentId,
+  pendingBillPaymentId,
+  menuBillPaymentId,
+  editBillPaymentAmount,
+  setEditBillPaymentAmount,
+  setEditingBillPaymentId,
+  setMenuBillPaymentId,
+  startEditBillPayment,
+  saveBillPaymentEdit,
+  revertBillPayment,
 }: {
   item: Extract<TxListMergedItem, { kind: "bill_payment" }>;
+  billActionsEnabled: boolean;
+  editingBillPaymentId: string | null;
+  pendingBillPaymentId: string | null;
+  menuBillPaymentId: string | null;
+  editBillPaymentAmount: string;
+  setEditBillPaymentAmount: (s: string) => void;
+  setEditingBillPaymentId: (id: string | null) => void;
+  setMenuBillPaymentId: (id: string | null) => void;
+  startEditBillPayment: (b: ApiBill) => void;
+  saveBillPaymentEdit: (billId: string) => void | Promise<void>;
+  revertBillPayment: (billId: string) => void | Promise<void>;
 }) {
   const { bill, paidAt } = item;
+  const displayAmount = billPaymentDisplayAmount(bill);
+  const isEditing = editingBillPaymentId === bill.id;
+  const isPending = pendingBillPaymentId === bill.id;
   const meta = CATEGORY_META[bill.category as Transaction["category"]] ?? {
     label: bill.category,
     color: "#d4d4d4",
@@ -150,15 +183,106 @@ function TxListMergedRowBill({
 
         <div className="relative z-[1] flex-none text-right whitespace-nowrap">
           <p className="font-body text-[13px] md:text-[14px] font-[700] leading-tight text-alert">
-            −{formatCurrency(bill.amount, "ILS")}
+            −{formatCurrency(displayAmount, "ILS")}
           </p>
           <p className="font-body mt-0.5 text-[8px] md:text-[9px] font-[500] text-[#999]">
             {formatDateTime(paidAt)}
           </p>
         </div>
 
-        <div className="flex-none w-5 md:w-6 flex-shrink-0" aria-hidden />
+        {billActionsEnabled ? (
+          <div className="flex-none relative ml-0.5 md:ml-1">
+            <button
+              type="button"
+              aria-label="Bill payment actions"
+              disabled={isPending}
+              onClick={() => setMenuBillPaymentId(menuBillPaymentId === bill.id ? null : bill.id)}
+              className="w-5 md:w-6 h-5 md:h-6 flex items-center justify-center rounded-[5px] md:rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" className="md:w-[16px] md:h-[16px]" fill="#111008">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            {menuBillPaymentId === bill.id && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setMenuBillPaymentId(null)}
+                  className="fixed inset-0 z-20 cursor-default"
+                />
+                <div className="absolute right-0 top-7 z-30 flex flex-col min-w-[110px] border-2 border-ink rounded-[10px] shadow-neo-sm bg-base overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuBillPaymentId(null);
+                      isEditing ? setEditingBillPaymentId(null) : startEditBillPayment(bill);
+                    }}
+                    className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-ink hover:bg-ink/5 text-left"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+                    </svg>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuBillPaymentId(null);
+                      void revertBillPayment(bill.id);
+                    }}
+                    className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-alert hover:bg-alert/10 border-t border-ink/20 text-left"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex-none w-5 md:w-6 flex-shrink-0" aria-hidden />
+        )}
       </div>
+
+      {isEditing && (
+        <div className="flex items-center gap-2 pt-2 border-t border-ink/20">
+          <p className="font-body flex-1 min-w-0 text-[10px] font-[600] text-ink/70">
+            Amount only — does not change your recurring bill
+          </p>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={editBillPaymentAmount}
+            onChange={(e) => setEditBillPaymentAmount(e.target.value)}
+            placeholder="Amount"
+            className="font-body w-24 text-[12px] px-2 py-1 border-2 border-ink rounded-[8px] bg-base text-right focus:outline-none focus:shadow-neo-xs"
+          />
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => void saveBillPaymentEdit(bill.id)}
+            className="font-body text-[11px] font-[700] uppercase px-2.5 py-1 border-2 border-ink rounded-[8px] bg-reward shadow-neo-xs active:shadow-none active:translate-y-[1px] disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setEditingBillPaymentId(null)}
+            className="font-body text-[11px] font-[700] uppercase px-2.5 py-1 border-2 border-ink rounded-[8px] bg-base"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -327,6 +451,8 @@ export function TransactionsCard({
   transactionsListYear,
   onTransactionEdit,
   onTransactionDelete,
+  onBillPaymentAmountEdit,
+  onBillPaymentRevert,
 }: {
   transactions: Transaction[];
   bills?: ApiBill[];
@@ -334,6 +460,8 @@ export function TransactionsCard({
   transactionsListYear: number;
   onTransactionEdit?: (id: string, patch: EditPatch) => Promise<void> | void;
   onTransactionDelete?: (id: string) => Promise<void> | void;
+  onBillPaymentAmountEdit?: (billId: string, amount: number) => Promise<void> | void;
+  onBillPaymentRevert?: (billId: string) => Promise<void> | void;
 }) {
   const [txFilter, setTxFilter] = useState<TxFilter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -341,6 +469,12 @@ export function TransactionsCard({
   const [editAmount, setEditAmount] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [editingBillPaymentId, setEditingBillPaymentId] = useState<string | null>(null);
+  const [editBillPaymentAmount, setEditBillPaymentAmount] = useState("");
+  const [pendingBillPaymentId, setPendingBillPaymentId] = useState<string | null>(null);
+  const [menuBillPaymentId, setMenuBillPaymentId] = useState<string | null>(null);
+
+  const billActionsEnabled = Boolean(onBillPaymentAmountEdit && onBillPaymentRevert);
 
   const merged = useMemo(
     () =>
@@ -379,6 +513,35 @@ export function TransactionsCard({
       await onTransactionDelete?.(id);
     } finally {
       setPendingId(null);
+    }
+  }
+
+  function startEditBillPayment(b: ApiBill) {
+    setEditingBillPaymentId(b.id);
+    setEditBillPaymentAmount(String(billPaymentDisplayAmount(b)));
+  }
+
+  async function saveBillPaymentEdit(billId: string) {
+    const amount = parseFloat(editBillPaymentAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    setPendingBillPaymentId(billId);
+    try {
+      await onBillPaymentAmountEdit?.(billId, amount);
+      setEditingBillPaymentId(null);
+    } finally {
+      setPendingBillPaymentId(null);
+    }
+  }
+
+  async function revertBillPayment(billId: string) {
+    if (!confirm("Remove this payment? The bill will show as unpaid again.")) return;
+    setPendingBillPaymentId(billId);
+    try {
+      await onBillPaymentRevert?.(billId);
+      setEditingBillPaymentId(null);
+      setMenuBillPaymentId(null);
+    } finally {
+      setPendingBillPaymentId(null);
     }
   }
 
@@ -433,7 +596,21 @@ export function TransactionsCard({
             ) : (
               visible.map((item) =>
                 item.kind === "bill_payment" ? (
-                  <TxListMergedRowBill key={`bill-payment:${item.bill.id}`} item={item} />
+                  <TxListMergedRowBill
+                    key={`bill-payment:${item.bill.id}`}
+                    item={item}
+                    billActionsEnabled={billActionsEnabled}
+                    editingBillPaymentId={editingBillPaymentId}
+                    pendingBillPaymentId={pendingBillPaymentId}
+                    menuBillPaymentId={menuBillPaymentId}
+                    editBillPaymentAmount={editBillPaymentAmount}
+                    setEditBillPaymentAmount={setEditBillPaymentAmount}
+                    setEditingBillPaymentId={setEditingBillPaymentId}
+                    setMenuBillPaymentId={setMenuBillPaymentId}
+                    startEditBillPayment={startEditBillPayment}
+                    saveBillPaymentEdit={saveBillPaymentEdit}
+                    revertBillPayment={revertBillPayment}
+                  />
                 ) : (
                   <TxListMergedRowTransaction
                     key={item.transaction.id}
@@ -475,7 +652,9 @@ export function BillsCard({
   const [editingBill, setEditingBill] = useState<ApiBill | null>(null);
 
   const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
-  const paidThisMonthAmount = bills.filter((b) => paidThisMonth(b)).reduce((sum, b) => sum + b.amount, 0);
+  const paidThisMonthAmount = bills
+    .filter((b) => paidThisMonth(b))
+    .reduce((sum, b) => sum + billPaymentDisplayAmount(b), 0);
   const paidRatio = totalBillsAmount > 0 ? Math.min((paidThisMonthAmount / totalBillsAmount) * 100, 100) : 0;
 
   const filteredBills = useMemo(() => {
@@ -631,6 +810,8 @@ export function BillsAndTransactionsCard({
   onTransactionDelete,
   onBillMarkPaid,
   onBillDelete,
+  onBillPaymentAmountEdit,
+  onBillPaymentRevert,
 }: {
   bills: ApiBill[];
   transactions: Transaction[];
@@ -640,6 +821,8 @@ export function BillsAndTransactionsCard({
   onTransactionDelete?: (id: string) => Promise<void> | void;
   onBillMarkPaid?: (id: string) => Promise<void> | void;
   onBillDelete?: (id: string) => Promise<void> | void;
+  onBillPaymentAmountEdit?: (billId: string, amount: number) => Promise<void> | void;
+  onBillPaymentRevert?: (billId: string) => Promise<void> | void;
 }) {
   const [tab, setTab] = useState<"transactions" | "bills">("transactions");
   const [txFilter, setTxFilter] = useState<TxFilter>("all");
@@ -651,6 +834,12 @@ export function BillsAndTransactionsCard({
   const [editAmount, setEditAmount] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [editingBillPaymentId, setEditingBillPaymentId] = useState<string | null>(null);
+  const [editBillPaymentAmount, setEditBillPaymentAmount] = useState("");
+  const [pendingBillPaymentId, setPendingBillPaymentId] = useState<string | null>(null);
+  const [menuBillPaymentId, setMenuBillPaymentId] = useState<string | null>(null);
+
+  const billActionsEnabled = Boolean(onBillPaymentAmountEdit && onBillPaymentRevert);
 
   const mergedTx = useMemo(
     () =>
@@ -692,9 +881,40 @@ export function BillsAndTransactionsCard({
     }
   }
 
+  function startEditBillPayment(b: ApiBill) {
+    setEditingBillPaymentId(b.id);
+    setEditBillPaymentAmount(String(billPaymentDisplayAmount(b)));
+  }
+
+  async function saveBillPaymentEdit(billId: string) {
+    const amount = parseFloat(editBillPaymentAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    setPendingBillPaymentId(billId);
+    try {
+      await onBillPaymentAmountEdit?.(billId, amount);
+      setEditingBillPaymentId(null);
+    } finally {
+      setPendingBillPaymentId(null);
+    }
+  }
+
+  async function revertBillPayment(billId: string) {
+    if (!confirm("Remove this payment? The bill will show as unpaid again.")) return;
+    setPendingBillPaymentId(billId);
+    try {
+      await onBillPaymentRevert?.(billId);
+      setEditingBillPaymentId(null);
+      setMenuBillPaymentId(null);
+    } finally {
+      setPendingBillPaymentId(null);
+    }
+  }
+
   // Bills data
   const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
-  const paidThisMonthAmount = bills.filter((b) => paidThisMonth(b)).reduce((sum, b) => sum + b.amount, 0);
+  const paidThisMonthAmount = bills
+    .filter((b) => paidThisMonth(b))
+    .reduce((sum, b) => sum + billPaymentDisplayAmount(b), 0);
   const paidRatio = totalBillsAmount > 0 ? Math.min((paidThisMonthAmount / totalBillsAmount) * 100, 100) : 0;
 
   const filteredBills = useMemo(() => {
@@ -803,7 +1023,21 @@ export function BillsAndTransactionsCard({
                 ) : (
                   visibleTx.map((item) =>
                     item.kind === "bill_payment" ? (
-                      <TxListMergedRowBill key={`bill-payment:${item.bill.id}`} item={item} />
+                      <TxListMergedRowBill
+                        key={`bill-payment:${item.bill.id}`}
+                        item={item}
+                        billActionsEnabled={billActionsEnabled}
+                        editingBillPaymentId={editingBillPaymentId}
+                        pendingBillPaymentId={pendingBillPaymentId}
+                        menuBillPaymentId={menuBillPaymentId}
+                        editBillPaymentAmount={editBillPaymentAmount}
+                        setEditBillPaymentAmount={setEditBillPaymentAmount}
+                        setEditingBillPaymentId={setEditingBillPaymentId}
+                        setMenuBillPaymentId={setMenuBillPaymentId}
+                        startEditBillPayment={startEditBillPayment}
+                        saveBillPaymentEdit={saveBillPaymentEdit}
+                        revertBillPayment={revertBillPayment}
+                      />
                     ) : (
                       <TxListMergedRowTransaction
                         key={item.transaction.id}

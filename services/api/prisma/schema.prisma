@@ -212,8 +212,10 @@ model Bill {
   isRecurring    Boolean         @default(true)
   isSubscription Boolean         @default(false)
   reminderDays   Int             @default(3)
-  isPaid         Boolean         @default(false)
-  lastPaidDate   DateTime?
-  createdAt      DateTime        @default(now())
+  isPaid          Boolean        @default(false)
+  lastPaidDate    DateTime?
+  /** Actual amount for the payment shown in activity; null => use `amount` (bill template). */
+  lastPaidAmount  Float?
+  createdAt       DateTime       @default(now())
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

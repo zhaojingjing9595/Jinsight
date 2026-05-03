@@ -45,6 +45,7 @@ type ApiBill = {
   isSubscription?: boolean;
   isPaid: boolean;
   lastPaidDate?: string | null;
+  lastPaidAmount?: number | null;
   reminderDays?: number;
 };
 
@@ -274,6 +275,14 @@ export default function DashboardPage() {
               await trpcMutate("bills.delete", { id });
               await reloadBills();
             }}
+            onBillPaymentAmountEdit={async (billId, amount) => {
+              await trpcMutate("bills.updatePaymentAmount", { id: billId, amount });
+              await reloadBills();
+            }}
+            onBillPaymentRevert={async (billId) => {
+              await trpcMutate("bills.revertPayment", { id: billId });
+              await reloadBills();
+            }}
           />
         </div>
 
@@ -296,6 +305,14 @@ export default function DashboardPage() {
             onTransactionDelete={async (id) => {
               await trpcMutate("transactions.delete", { id });
               setTransactions((prev) => prev.filter((t) => t.id !== id));
+            }}
+            onBillPaymentAmountEdit={async (billId, amount) => {
+              await trpcMutate("bills.updatePaymentAmount", { id: billId, amount });
+              await reloadBills();
+            }}
+            onBillPaymentRevert={async (billId) => {
+              await trpcMutate("bills.revertPayment", { id: billId });
+              await reloadBills();
             }}
           />
           <BillsCard

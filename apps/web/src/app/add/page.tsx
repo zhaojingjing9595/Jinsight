@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BottomNav } from "@/components/BottomNav";
+import { AddFlowHeader } from "@/components/AddFlowHeader";
 import { AddSwitcher } from "@/components/AddSwitcher";
 import { AddTransactionForm } from "@/components/AddTransactionForm";
 
@@ -10,13 +10,12 @@ export default function AddPage() {
 
   return (
     <div className="flex flex-col max-w-[480px] mx-auto bg-base h-dvh">
+      <AddFlowHeader />
       <AddSwitcher active="transaction" />
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[calc(80px+16px)]">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px)+1rem)]">
         <AddTransactionForm onSaved={() => router.refresh()} />
       </div>
-
-      <BottomNav active="add" />
     </div>
   );
 }
