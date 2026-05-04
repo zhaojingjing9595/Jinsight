@@ -15,7 +15,7 @@ export const authRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const user = await ctx.prisma.user.upsert({
+      await ctx.prisma.user.upsert({
         where: { id: ctx.userId },
         update: {},
         create: {
@@ -23,15 +23,29 @@ export const authRouter = router({
           email: ctx.userEmail ?? "",
           name: input.name,
           currency: input.currency,
-          accounts: {
-            create: {
-              name: "Personal",
-              type: "PERSONAL",
-              balance: 0,
-            },
-          },
         },
-        include: { accounts: true },
+      });
+
+      // Provision a default account if the user doesn't have one yet
+      const existing = await ctx.prisma.accountMember.findFirst({
+        where: { userId: ctx.userId },
+        include: { account: true },
+      });
+
+      if (!existing) {
+        await ctx.prisma.account.create({
+          data: {
+            name: "Personal",
+            type: "PERSONAL",
+            balance: 0,
+            members: { create: { userId: ctx.userId, role: "OWNER" } },
+          },
+        });
+      }
+
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.userId },
+        include: { accountMembers: { include: { account: true } } },
       });
 
       return { user };

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Category } from "@jinsight/core";
-import { trpcMutate } from "@/lib/api";
+import { trpcMutate, trpcQuery } from "@/lib/api";
 import { CategoryPicker } from "@/components/CategoryPicker";
 
 type Recurrence = "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
@@ -36,6 +36,7 @@ type Bill = {
 };
 
 type AddBillFormProps = {
+  accountId?: string;
   initial?: Partial<Bill>;
   onSaved?: (bill: Bill) => void;
 };
@@ -46,8 +47,18 @@ function todayPlus(days: number): string {
   return d.toISOString().split("T")[0];
 }
 
-export function AddBillForm({ initial, onSaved }: AddBillFormProps) {
+export function AddBillForm({ accountId: accountIdProp, initial, onSaved }: AddBillFormProps) {
   const editing = Boolean(initial?.id);
+
+  const [resolvedAccountId, setResolvedAccountId] = useState<string | null>(accountIdProp ?? null);
+
+  useEffect(() => {
+    if (accountIdProp || editing) return;
+    trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me").then((me) => {
+      const id = me.user.accounts?.[0]?.id;
+      if (id) setResolvedAccountId(id);
+    }).catch(() => {});
+  }, [accountIdProp, editing]);
 
   const [name, setName] = useState(initial?.name ?? "");
   const [amount, setAmount] = useState<string>(
@@ -67,7 +78,7 @@ export function AddBillForm({ initial, onSaved }: AddBillFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const amountNum = parseFloat(amount);
-  const valid = name.trim().length > 0 && amountNum > 0 && Boolean(dueDate);
+  const valid = name.trim().length > 0 && amountNum > 0 && Boolean(dueDate) && (editing || Boolean(resolvedAccountId));
 
   async function handleSave() {
     if (!valid || saving) return;
@@ -87,7 +98,7 @@ export function AddBillForm({ initial, onSaved }: AddBillFormProps) {
 
       const res = editing
         ? await trpcMutate<{ bill: Bill }>("bills.update", { id: initial!.id, ...payload })
-        : await trpcMutate<{ bill: Bill }>("bills.create", payload);
+        : await trpcMutate<{ bill: Bill }>("bills.create", { accountId: resolvedAccountId!, ...payload });
 
       window.dispatchEvent(new CustomEvent("jinsight:bill-changed"));
       setSaved(true);

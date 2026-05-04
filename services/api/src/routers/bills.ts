@@ -38,11 +38,24 @@ function rollBackward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | 
   }
 }
 
+async function assertBillAccess(ctx: { userId: string; prisma: any }, billId: string) {
+  const bill = await ctx.prisma.bill.findUnique({ where: { id: billId } });
+  if (!bill) throw new TRPCError({ code: "NOT_FOUND", message: "Bill not found" });
+
+  const member = await ctx.prisma.accountMember.findUnique({
+    where: { accountId_userId: { accountId: bill.accountId, userId: ctx.userId } },
+  });
+  if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
+
+  return bill;
+}
+
 export const billsRouter = router({
   list: protectedProcedure
     .input(
       z
         .object({
+          accountId: z.string().optional(),
           status: z.enum(["all", "upcoming", "paid", "overdue"]).optional(),
           limit: z.number().int().positive().optional(),
         })
@@ -52,16 +65,13 @@ export const billsRouter = router({
       const status = input?.status ?? "all";
       const now = new Date();
 
-      const where: Record<string, unknown> = { userId: ctx.userId };
+      const where: Record<string, unknown> = input?.accountId
+        ? { accountId: input.accountId }
+        : { account: { members: { some: { userId: ctx.userId } } } };
+
       if (status === "paid") where.isPaid = true;
-      if (status === "upcoming") {
-        where.isPaid = false;
-        where.dueDate = { gte: now };
-      }
-      if (status === "overdue") {
-        where.isPaid = false;
-        where.dueDate = { lt: now };
-      }
+      if (status === "upcoming") { where.isPaid = false; where.dueDate = { gte: now }; }
+      if (status === "overdue") { where.isPaid = false; where.dueDate = { lt: now }; }
 
       const bills = await ctx.prisma.bill.findMany({
         where,
@@ -75,18 +85,14 @@ export const billsRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const bill = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-
-      if (!bill || bill.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Bill not found" });
-      }
-
+      const bill = await assertBillAccess(ctx, input.id);
       return { bill };
     }),
 
   create: protectedProcedure
     .input(
       z.object({
+        accountId: z.string(),
         name: z.string().min(1),
         amount: z.number().positive(),
         dueDate: z.string().datetime(),
@@ -98,9 +104,15 @@ export const billsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const bill = await ctx.prisma.bill.create({
+      const member = await ctx.prisma.accountMember.findUnique({
+        where: { accountId_userId: { accountId: input.accountId, userId: ctx.userId } },
+      });
+      if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bill = await (ctx.prisma.bill.create as any)({
         data: {
-          userId: ctx.userId,
+          accountId: input.accountId,
           name: input.name,
           amount: input.amount,
           dueDate: new Date(input.dueDate),
@@ -131,18 +143,12 @@ export const billsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
-      }
+      await assertBillAccess(ctx, input.id);
 
       const { id, dueDate, ...rest } = input;
       const bill = await ctx.prisma.bill.update({
         where: { id },
-        data: {
-          ...rest,
-          ...(dueDate && { dueDate: new Date(dueDate) }),
-        },
+        data: { ...rest, ...(dueDate && { dueDate: new Date(dueDate) }) },
       });
 
       return { bill };
@@ -151,30 +157,32 @@ export const billsRouter = router({
   markPaid: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
-      }
-
+      const existing = await assertBillAccess(ctx, input.id);
       const now = new Date();
+
+      await ctx.prisma.transaction.create({
+        data: {
+          accountId: existing.accountId,
+          type: "EXPENSE",
+          amount: existing.amount,
+          category: existing.category,
+          description: existing.name,
+          date: now,
+        },
+      });
 
       if (existing.isRecurring) {
         const nextDue = rollForward(existing.dueDate, existing.recurrence);
         const bill = await ctx.prisma.bill.update({
           where: { id: input.id },
-          data: {
-            lastPaidDate: now,
-            lastPaidAmount: null,
-            dueDate: nextDue,
-            isPaid: false,
-          },
+          data: { lastPaidDate: now, lastPaidAmount: existing.amount, dueDate: nextDue, isPaid: false },
         });
         return { bill };
       }
 
       const bill = await ctx.prisma.bill.update({
         where: { id: input.id },
-        data: { isPaid: true, lastPaidDate: now, lastPaidAmount: null },
+        data: { isPaid: true, lastPaidDate: now, lastPaidAmount: existing.amount },
       });
       return { bill };
     }),
@@ -183,14 +191,24 @@ export const billsRouter = router({
   updatePaymentAmount: protectedProcedure
     .input(z.object({ id: z.string(), amount: z.number().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
-      }
+      const existing = await assertBillAccess(ctx, input.id);
 
       if (!existing.lastPaidDate) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bill has no payment to edit" });
       }
+
+      const oldAmount = existing.lastPaidAmount ?? existing.amount;
+      await ctx.prisma.transaction.updateMany({
+        where: {
+          accountId: existing.accountId,
+          description: existing.name,
+          date: existing.lastPaidDate,
+          amount: oldAmount,
+          category: existing.category,
+          type: "EXPENSE",
+        },
+        data: { amount: input.amount },
+      });
 
       const bill = await ctx.prisma.bill.update({
         where: { id: input.id },
@@ -204,36 +222,35 @@ export const billsRouter = router({
   revertPayment: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
-      }
+      const existing = await assertBillAccess(ctx, input.id);
 
       if (!existing.lastPaidDate) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "No payment to revert" });
       }
 
+      await ctx.prisma.transaction.deleteMany({
+        where: {
+          accountId: existing.accountId,
+          description: existing.name,
+          date: existing.lastPaidDate,
+          amount: existing.lastPaidAmount ?? existing.amount,
+          category: existing.category,
+          type: "EXPENSE",
+        },
+      });
+
       if (existing.isRecurring) {
         const prevDue = rollBackward(existing.dueDate, existing.recurrence);
         const bill = await ctx.prisma.bill.update({
           where: { id: input.id },
-          data: {
-            lastPaidDate: null,
-            lastPaidAmount: null,
-            dueDate: prevDue,
-            isPaid: false,
-          },
+          data: { lastPaidDate: null, lastPaidAmount: null, dueDate: prevDue, isPaid: false },
         });
         return { bill };
       }
 
       const bill = await ctx.prisma.bill.update({
         where: { id: input.id },
-        data: {
-          isPaid: false,
-          lastPaidDate: null,
-          lastPaidAmount: null,
-        },
+        data: { isPaid: false, lastPaidDate: null, lastPaidAmount: null },
       });
 
       return { bill };
@@ -242,11 +259,7 @@ export const billsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.bill.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your bill" });
-      }
-
+      await assertBillAccess(ctx, input.id);
       await ctx.prisma.bill.delete({ where: { id: input.id } });
       return { deleted: input.id };
     }),

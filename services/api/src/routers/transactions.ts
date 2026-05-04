@@ -2,6 +2,23 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
 
+function rollBackward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"): Date {
+  const d = new Date(date);
+  switch (recurrence) {
+    case "WEEKLY":
+      d.setDate(d.getDate() - 7);
+      return d;
+    case "ANNUAL":
+      d.setFullYear(d.getFullYear() - 1);
+      return d;
+    case "MONTHLY":
+    case "CUSTOM":
+    default:
+      d.setMonth(d.getMonth() - 1);
+      return d;
+  }
+}
+
 export const transactionsRouter = router({
   list: protectedProcedure
     .input(
@@ -165,13 +182,48 @@ export const transactionsRouter = router({
 
       const balanceDelta = existing.type === "INCOME" ? -existing.amount : existing.amount;
 
-      await ctx.prisma.$transaction([
+      // Check if this transaction matches a bill payment (by name, date, amount, category)
+      const matchingBill = existing.type === "EXPENSE" && existing.description
+        ? await ctx.prisma.bill.findFirst({
+            where: {
+              accountId: existing.accountId,
+              name: existing.description,
+              category: existing.category,
+              lastPaidDate: {
+                gte: new Date(existing.date.getTime() - 1000),
+                lte: new Date(existing.date.getTime() + 1000),
+              },
+            },
+          })
+        : null;
+
+      const ops = [
         ctx.prisma.transaction.delete({ where: { id: input.id } }),
         ctx.prisma.account.update({
           where: { id: existing.accountId },
           data: { balance: { increment: balanceDelta } },
         }),
-      ]);
+        ...(matchingBill
+          ? [
+              matchingBill.isRecurring
+                ? ctx.prisma.bill.update({
+                    where: { id: matchingBill.id },
+                    data: {
+                      lastPaidDate: null,
+                      lastPaidAmount: null,
+                      dueDate: rollBackward(matchingBill.dueDate, matchingBill.recurrence as "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"),
+                      isPaid: false,
+                    },
+                  })
+                : ctx.prisma.bill.update({
+                    where: { id: matchingBill.id },
+                    data: { isPaid: false, lastPaidDate: null, lastPaidAmount: null },
+                  }),
+            ]
+          : []),
+      ] as const;
+
+      await ctx.prisma.$transaction([...ops]);
 
       return { deleted: input.id };
     }),

@@ -25,6 +25,7 @@ Running list of things to revisit later. Jot ideas down freely — triage later.
 
 ## Features
 
+- [ ] Google OAuth: sign up / login via Google account (planned for after Phase 3)
 - [ ] Transaction list: add swipe-to-edit and swipe-to-delete on each row
 - [ ] Budget / Goals: allow user to reorder list items via drag
 - [ ] Goals: "add saved money" flow — how does a deposit get attributed to a specific goal?

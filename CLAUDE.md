@@ -12,7 +12,7 @@ Personal finance app. Fun, young, modern — not corporate or clinical.
 | Shared UI | `packages/ui` — Neobrutalism tokens + base components |
 | API | Fastify 5 + tRPC 11 (`services/api`) — 9 routers, Zod validation |
 | Database | Supabase (PostgreSQL) + Prisma 6 |
-| Auth | Supabase Auth — email/password, OAuth ready |
+| Auth | Supabase Auth — email/password, Google OAuth (planned) |
 | Monorepo | Turborepo + pnpm workspaces |
 | Visualization | D3 / SVG (pie chart, bar chart) |
 | AI narrative | Anthropic Claude API (`@anthropic-ai/sdk`) — integrated in API, not yet wired to UI |
@@ -77,7 +77,7 @@ See [`DESIGN.md`](./DESIGN.md) for the full Neobrutalism spec. Apply it to every
 Key fields to know:
 - `Account` has `openingBalance` + `openingBalanceSources` (editable from dashboard)
 - `Transaction` has `budgetPlanId` and `goalId` for linking to plans/goals
-- `Bill` has `recurrence` (MONTHLY | ANNUAL | WEEKLY | CUSTOM), `reminderDays`, `isPaid`
+- `Bill` has `recurrence` (MONTHLY | ANNUAL | WEEKLY | CUSTOM), `reminderDays`, `isPaid`, `lastPaidDate`, `lastPaidAmount` (for tracking payment history)
 - `Goal` has `spendingPlan` (JSON array of categories), `status` (PLANNING→SAVING→ACTIVE→COMPLETE)
 - Default currency: `ILS`
 

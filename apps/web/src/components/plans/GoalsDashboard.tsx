@@ -34,6 +34,7 @@ function groupGoals(goals: Goal[]): StatusGroup[] {
 
 export function GoalsDashboard() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
@@ -41,8 +42,12 @@ export function GoalsDashboard() {
 
   const load = useCallback(async () => {
     try {
-      const data = await trpcQuery<{ goals: Goal[] }>("goals.list");
-      setGoals(data.goals);
+      const [goalsData, me] = await Promise.all([
+        trpcQuery<{ goals: Goal[] }>("goals.list"),
+        trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me"),
+      ]);
+      setGoals(goalsData.goals);
+      setAccountId(me.user.accounts?.[0]?.id ?? null);
     } catch (err) {
       console.error("Failed to load goals:", err);
     } finally {
@@ -55,8 +60,10 @@ export function GoalsDashboard() {
   }, [load]);
 
   async function handleCreate(data: GoalFormData) {
+    if (!accountId) return;
     try {
       await trpcMutate("goals.create", {
+        accountId,
         type: data.type,
         name: data.name,
         emoji: data.emoji,

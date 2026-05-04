@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { Prisma } from "@prisma/client";
 import { router, protectedProcedure } from "../lib/trpc";
 
 const GoalTypeEnum = z.enum(["TRIP_EVENT", "PURCHASE", "EMERGENCY", "DEBT", "CUSTOM"]);
@@ -11,31 +12,45 @@ const SpendingPlanItem = z.object({
   actual: z.number().min(0).default(0),
 });
 
-export const goalsRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const goals = await ctx.prisma.goal.findMany({
-      where: { userId: ctx.userId },
-      orderBy: { createdAt: "desc" },
-    });
+async function assertGoalAccess(ctx: { userId: string; prisma: any }, goalId: string) {
+  const goal = await ctx.prisma.goal.findUnique({ where: { id: goalId } });
+  if (!goal) throw new TRPCError({ code: "NOT_FOUND", message: "Goal not found" });
 
-    return { goals };
-  }),
+  const member = await ctx.prisma.accountMember.findUnique({
+    where: { accountId_userId: { accountId: goal.accountId, userId: ctx.userId } },
+  });
+  if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your goal" });
+
+  return goal;
+}
+
+export const goalsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ accountId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const where = input?.accountId
+        ? { accountId: input.accountId }
+        : { account: { members: { some: { userId: ctx.userId } } } };
+
+      const goals = await ctx.prisma.goal.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+      });
+
+      return { goals };
+    }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const goal = await ctx.prisma.goal.findUnique({ where: { id: input.id } });
-
-      if (!goal || goal.userId !== ctx.userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Goal not found" });
-      }
-
+      const goal = await assertGoalAccess(ctx, input.id);
       return { goal };
     }),
 
   create: protectedProcedure
     .input(
       z.object({
+        accountId: z.string(),
         type: GoalTypeEnum,
         name: z.string().min(1),
         emoji: z.string().default("🎯"),
@@ -48,18 +63,20 @@ export const goalsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const member = await ctx.prisma.accountMember.findUnique({
+        where: { accountId_userId: { accountId: input.accountId, userId: ctx.userId } },
+      });
+      if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+
+      const { accountId, startDate, endDate, spendingPlan, ...rest } = input;
       const goal = await ctx.prisma.goal.create({
         data: {
-          userId: ctx.userId,
-          type: input.type,
-          name: input.name,
-          emoji: input.emoji,
-          targetAmount: input.targetAmount,
-          savedAmount: input.savedAmount,
-          startDate: input.startDate ? new Date(input.startDate) : null,
-          endDate: input.endDate ? new Date(input.endDate) : null,
-          status: input.status,
-          spendingPlan: input.spendingPlan ?? undefined,
+          accountId,
+          createdBy: ctx.userId,
+          ...rest,
+          startDate: startDate ? new Date(startDate) : null,
+          endDate: endDate ? new Date(endDate) : null,
+          spendingPlan: spendingPlan ?? undefined,
         },
       });
 
@@ -82,18 +99,16 @@ export const goalsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.goal.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your goal" });
-      }
+      await assertGoalAccess(ctx, input.id);
 
-      const { id, startDate, endDate, ...rest } = input;
+      const { id, startDate, endDate, spendingPlan, ...rest } = input;
       const goal = await ctx.prisma.goal.update({
         where: { id },
         data: {
           ...rest,
           ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
           ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+          ...(spendingPlan !== undefined && { spendingPlan: spendingPlan === null ? Prisma.DbNull : spendingPlan }),
         },
       });
 
@@ -103,12 +118,19 @@ export const goalsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.goal.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your goal" });
-      }
-
+      await assertGoalAccess(ctx, input.id);
       await ctx.prisma.goal.delete({ where: { id: input.id } });
       return { deleted: input.id };
+    }),
+
+  updateStatus: protectedProcedure
+    .input(z.object({ id: z.string(), status: GoalStatusEnum }))
+    .mutation(async ({ ctx, input }) => {
+      await assertGoalAccess(ctx, input.id);
+      const goal = await ctx.prisma.goal.update({
+        where: { id: input.id },
+        data: { status: input.status },
+      });
+      return { goal };
     }),
 });

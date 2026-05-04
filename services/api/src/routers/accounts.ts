@@ -2,15 +2,24 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
 
+async function assertMember(ctx: { userId: string; prisma: any }, accountId: string) {
+  const member = await ctx.prisma.accountMember.findUnique({
+    where: { accountId_userId: { accountId, userId: ctx.userId } },
+  });
+  if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+  return member;
+}
+
+async function assertOwner(ctx: { userId: string; prisma: any }, accountId: string) {
+  const member = await assertMember(ctx, accountId);
+  if (member.role !== "OWNER") throw new TRPCError({ code: "FORBIDDEN", message: "Only the owner can do this" });
+  return member;
+}
+
 export const accountsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const accounts = await ctx.prisma.account.findMany({
-      where: {
-        OR: [
-          { userId: ctx.userId },
-          { members: { some: { userId: ctx.userId } } },
-        ],
-      },
+      where: { members: { some: { userId: ctx.userId } } },
       include: { members: true },
       orderBy: { createdAt: "asc" },
     });
@@ -30,9 +39,8 @@ export const accountsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });
       }
 
-      const isOwner = account.userId === ctx.userId;
-      const isMember = account.members.some((m) => m.userId === ctx.userId);
-      if (!isOwner && !isMember) {
+      const isMember = account.members.some((m: { userId: string }) => m.userId === ctx.userId);
+      if (!isMember) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
       }
 
@@ -50,11 +58,14 @@ export const accountsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const account = await ctx.prisma.account.create({
         data: {
-          userId: ctx.userId,
           name: input.name,
           type: input.type,
           balance: input.balance,
+          members: {
+            create: { userId: ctx.userId, role: "OWNER" },
+          },
         },
+        include: { members: true },
       });
 
       return { account };
@@ -73,16 +84,10 @@ export const accountsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.account.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
-      }
+      await assertMember(ctx, input.id);
 
       const { id, ...data } = input;
-      const account = await ctx.prisma.account.update({
-        where: { id },
-        data,
-      });
+      const account = await ctx.prisma.account.update({ where: { id }, data });
 
       return { account };
     }),
@@ -90,47 +95,28 @@ export const accountsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.prisma.account.findUnique({ where: { id: input.id } });
-      if (!existing || existing.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
-      }
+      await assertOwner(ctx, input.id);
 
       await ctx.prisma.account.delete({ where: { id: input.id } });
       return { deleted: input.id };
     }),
 
   addMember: protectedProcedure
-    .input(
-      z.object({
-        accountId: z.string(),
-        userId: z.string(),
-      }),
-    )
+    .input(z.object({ accountId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const account = await ctx.prisma.account.findUnique({ where: { id: input.accountId } });
-      if (!account || account.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only the owner can add members" });
-      }
+      await assertOwner(ctx, input.accountId);
 
       const member = await ctx.prisma.accountMember.create({
-        data: { accountId: input.accountId, userId: input.userId },
+        data: { accountId: input.accountId, userId: input.userId, role: "MEMBER" },
       });
 
       return { member };
     }),
 
   removeMember: protectedProcedure
-    .input(
-      z.object({
-        accountId: z.string(),
-        userId: z.string(),
-      }),
-    )
+    .input(z.object({ accountId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const account = await ctx.prisma.account.findUnique({ where: { id: input.accountId } });
-      if (!account || account.userId !== ctx.userId) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only the owner can remove members" });
-      }
+      await assertOwner(ctx, input.accountId);
 
       await ctx.prisma.accountMember.delete({
         where: { accountId_userId: { accountId: input.accountId, userId: input.userId } },

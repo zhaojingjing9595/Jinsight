@@ -8,17 +8,22 @@ export const usersRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.prisma.user.findUnique({
       where: { id: ctx.userId },
-      include: { accounts: true },
+      include: { accountMembers: { include: { account: true } } },
     });
+    // Flatten to match existing API shape (user.accounts)
+    const shaped = user ? {
+      ...user,
+      accounts: user.accountMembers.map((m) => m.account),
+    } : null;
 
-    if (!user) {
+    if (!shaped) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "User profile not found. Call auth.register first.",
       });
     }
 
-    return { user };
+    return { user: shaped };
   }),
 
   /** Update display name, preferred currency, or persona tag. */

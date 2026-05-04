@@ -7,29 +7,34 @@ const categoryAllocationSchema = z.object({
   limit: z.number().positive(),
 });
 
-async function assertOwner(ctx: { userId: string; prisma: any }, planId: string) {
-  const membership = await ctx.prisma.budgetPlanMember.findUnique({
-    where: { planId_userId: { planId, userId: ctx.userId } },
+async function assertPlanAccess(ctx: { userId: string; prisma: any }, planId: string) {
+  const plan = await ctx.prisma.budgetPlan.findUnique({ where: { id: planId } });
+  if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Budget plan not found" });
+
+  const member = await ctx.prisma.accountMember.findUnique({
+    where: { accountId_userId: { accountId: plan.accountId, userId: ctx.userId } },
   });
-  if (!membership || membership.role !== "OWNER") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Only the plan owner can do this" });
-  }
+  if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your budget plan" });
+
+  return plan;
 }
 
 export const budgetPlansRouter = router({
   list: protectedProcedure
     .input(
       z.object({
+        accountId: z.string().optional(),
         status: z.enum(["PLANNED", "ACTIVE", "COMPLETED"]).optional(),
-      }),
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
+      const accountFilter = input?.accountId
+        ? { accountId: input.accountId }
+        : { account: { members: { some: { userId: ctx.userId } } } };
+
       const budgetPlans = await ctx.prisma.budgetPlan.findMany({
-        where: {
-          members: { some: { userId: ctx.userId } },
-          ...(input.status && { status: input.status }),
-        },
-        include: { members: true, categories: true },
+        where: { ...accountFilter, ...(input?.status && { status: input.status }) },
+        include: { categories: true },
         orderBy: { createdAt: "desc" },
       });
 
@@ -39,18 +44,15 @@ export const budgetPlansRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      await assertPlanAccess(ctx, input.id);
+
       const budgetPlan = await ctx.prisma.budgetPlan.findUnique({
         where: { id: input.id },
         include: {
-          members: true,
           categories: true,
           transactions: { take: 50, orderBy: { date: "desc" } },
         },
       });
-
-      if (!budgetPlan) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Budget plan not found" });
-      }
 
       return { budgetPlan };
     }),
@@ -58,6 +60,7 @@ export const budgetPlansRouter = router({
   create: protectedProcedure
     .input(
       z.object({
+        accountId: z.string(),
         name: z.string().min(1),
         type: z.enum(["TRIP", "EDUCATION", "MOVING", "EVENT", "CUSTOM"]),
         startDate: z.string().datetime(),
@@ -68,28 +71,26 @@ export const budgetPlansRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const member = await ctx.prisma.accountMember.findUnique({
+        where: { accountId_userId: { accountId: input.accountId, userId: ctx.userId } },
+      });
+      if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
+
+      const { accountId, categories, startDate, endDate, ...rest } = input;
       const budgetPlan = await ctx.prisma.budgetPlan.create({
         data: {
-          name: input.name,
-          type: input.type,
-          startDate: new Date(input.startDate),
-          endDate: input.endDate ? new Date(input.endDate) : null,
-          totalLimit: input.totalLimit,
-          notes: input.notes,
+          accountId,
           createdBy: ctx.userId,
-          members: {
-            create: { userId: ctx.userId, role: "OWNER" },
-          },
-          ...(input.categories && {
+          ...rest,
+          startDate: new Date(startDate),
+          endDate: endDate ? new Date(endDate) : null,
+          ...(categories && {
             categories: {
-              create: input.categories.map((c) => ({
-                category: c.category,
-                limit: c.limit,
-              })),
+              create: categories.map((c) => ({ category: c.category, limit: c.limit })),
             },
           }),
         },
-        include: { members: true, categories: true },
+        include: { categories: true },
       });
 
       return { budgetPlan };
@@ -109,11 +110,11 @@ export const budgetPlansRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await assertOwner(ctx, input.id);
+      await assertPlanAccess(ctx, input.id);
 
       const { id, categories, startDate, endDate, ...rest } = input;
 
-      const budgetPlan = await ctx.prisma.budgetPlan.update({
+      await ctx.prisma.budgetPlan.update({
         where: { id },
         data: {
           ...rest,
@@ -129,54 +130,19 @@ export const budgetPlansRouter = router({
         });
       }
 
-      const result = await ctx.prisma.budgetPlan.findUnique({
+      const budgetPlan = await ctx.prisma.budgetPlan.findUnique({
         where: { id },
-        include: { members: true, categories: true },
+        include: { categories: true },
       });
 
-      return { budgetPlan: result };
+      return { budgetPlan };
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await assertOwner(ctx, input.id);
+      await assertPlanAccess(ctx, input.id);
       await ctx.prisma.budgetPlan.delete({ where: { id: input.id } });
       return { deleted: input.id };
-    }),
-
-  addMember: protectedProcedure
-    .input(
-      z.object({
-        planId: z.string(),
-        userId: z.string(),
-        role: z.enum(["OWNER", "MEMBER"]).default("MEMBER"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      await assertOwner(ctx, input.planId);
-
-      const member = await ctx.prisma.budgetPlanMember.create({
-        data: { planId: input.planId, userId: input.userId, role: input.role },
-      });
-
-      return { member };
-    }),
-
-  removeMember: protectedProcedure
-    .input(
-      z.object({
-        planId: z.string(),
-        userId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      await assertOwner(ctx, input.planId);
-
-      await ctx.prisma.budgetPlanMember.delete({
-        where: { planId_userId: { planId: input.planId, userId: input.userId } },
-      });
-
-      return { removed: true };
     }),
 });

@@ -37,11 +37,6 @@ enum BudgetPlanStatus {
   COMPLETED
 }
 
-enum BudgetPlanRole {
-  OWNER
-  MEMBER
-}
-
 enum GoalType {
   TRIP_EVENT
   PURCHASE
@@ -64,60 +59,66 @@ enum BillRecurrence {
   CUSTOM
 }
 
+enum AccountMemberRole {
+  OWNER
+  MEMBER
+}
+
 model User {
-  id           String        @id
-  email        String        @unique
-  name         String?
-  currency     String        @default("ILS")
-  persona      String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  accounts     Account[]
-  goals        Goal[]
-  bills        Bill[]
+  id             String          @id
+  email          String          @unique
+  name           String?
+  currency       String          @default("ILS")
+  persona        String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  accountMembers AccountMember[]
 }
 
 model Account {
   id                    String          @id @default(uuid())
-  userId                String
   name                  String
   type                  AccountType     @default(PERSONAL)
   balance               Float           @default(0)
   openingBalance        Float?
   openingBalanceSources Json?
   createdAt             DateTime        @default(now())
-  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions          Transaction[]
   members               AccountMember[]
+  transactions          Transaction[]
   budgets               Budget[]
+  bills                 Bill[]
+  goals                 Goal[]
+  budgetPlans           BudgetPlan[]
 }
 
 model AccountMember {
-  id        String   @id @default(uuid())
+  id        String            @id @default(uuid())
   accountId String
   userId    String
-  joinedAt  DateTime @default(now())
-  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  role      AccountMemberRole @default(MEMBER)
+  joinedAt  DateTime          @default(now())
+  account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, userId])
 }
 
 model Transaction {
-  id           String      @id @default(uuid())
-  accountId    String
-  amount       Float
-  type         TxType
-  category     String
-  description  String?
-  date         DateTime
-  isRecurring  Boolean     @default(false)
-  budgetPlanId String?
-  goalId       String?
-  excludeFromBudget Boolean @default(false)
-  createdAt    DateTime    @default(now())
-  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  budgetPlan   BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
-  goal         Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  id                String      @id @default(uuid())
+  accountId         String
+  amount            Float
+  type              TxType
+  category          String
+  description       String?
+  date              DateTime
+  isRecurring       Boolean     @default(false)
+  budgetPlanId      String?
+  goalId            String?
+  excludeFromBudget Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  account           Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  budgetPlan        BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+  goal              Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
@@ -147,30 +148,20 @@ model BudgetCategory {
 }
 
 model BudgetPlan {
-  id         String              @id @default(uuid())
-  name       String
-  type       BudgetPlanType
-  startDate  DateTime
-  endDate    DateTime?
-  totalLimit Float
-  status     BudgetPlanStatus    @default(PLANNED)
-  notes      String?
-  createdBy  String
-  createdAt  DateTime            @default(now())
-  members    BudgetPlanMember[]
-  categories BudgetPlanCategory[]
+  id           String               @id @default(uuid())
+  accountId    String
+  name         String
+  type         BudgetPlanType
+  startDate    DateTime
+  endDate      DateTime?
+  totalLimit   Float
+  status       BudgetPlanStatus     @default(PLANNED)
+  notes        String?
+  createdBy    String
+  createdAt    DateTime             @default(now())
+  account      Account              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categories   BudgetPlanCategory[]
   transactions Transaction[]
-}
-
-model BudgetPlanMember {
-  id       String         @id @default(uuid())
-  planId   String
-  userId   String
-  role     BudgetPlanRole @default(MEMBER)
-  joinedAt DateTime       @default(now())
-  plan     BudgetPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-
-  @@unique([planId, userId])
 }
 
 model BudgetPlanCategory {
@@ -184,38 +175,39 @@ model BudgetPlanCategory {
 }
 
 model Goal {
-  id           String     @id @default(uuid())
-  userId       String
-  type         GoalType   @default(CUSTOM)
+  id           String        @id @default(uuid())
+  accountId    String
+  type         GoalType      @default(CUSTOM)
   name         String
-  emoji        String     @default("🎯")
+  emoji        String        @default("🎯")
   targetAmount Float
-  savedAmount  Float      @default(0)
+  savedAmount  Float         @default(0)
   startDate    DateTime?
   endDate      DateTime?
-  status       GoalStatus @default(PLANNING)
+  status       GoalStatus    @default(PLANNING)
   spendingPlan Json?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
 
 model Bill {
-  id             String          @id @default(uuid())
-  userId         String
+  id             String         @id @default(uuid())
+  accountId      String
   name           String
   amount         Float
   dueDate        DateTime
-  category       String          @default("utilities")
-  recurrence     BillRecurrence  @default(MONTHLY)
-  isRecurring    Boolean         @default(true)
-  isSubscription Boolean         @default(false)
-  reminderDays   Int             @default(3)
-  isPaid          Boolean        @default(false)
-  lastPaidDate    DateTime?
+  category       String         @default("utilities")
+  recurrence     BillRecurrence @default(MONTHLY)
+  isRecurring    Boolean        @default(true)
+  isSubscription Boolean        @default(false)
+  reminderDays   Int            @default(3)
+  isPaid         Boolean        @default(false)
+  lastPaidDate   DateTime?
   /** Actual amount for the payment shown in activity; null => use `amount` (bill template). */
-  lastPaidAmount  Float?
-  createdAt       DateTime       @default(now())
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastPaidAmount Float?
+  createdAt      DateTime       @default(now())
+  account        Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
