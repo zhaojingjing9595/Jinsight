@@ -84,16 +84,22 @@ export const CATEGORY_ICON_PATHS: Record<Category, string[]> = {
   ],
 };
 
+// Generic tag icon shown for user-created custom categories
+const CUSTOM_ICON_PATHS = [
+  "M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z",
+  "M7 7h.01",
+];
+
 export function CategoryIcon({
   category,
   size = 22,
   strokeWidth = 2,
 }: {
-  category: Category;
+  category: string;
   size?: number;
   strokeWidth?: number;
 }) {
-  const paths = CATEGORY_ICON_PATHS[category] ?? [];
+  const paths = CATEGORY_ICON_PATHS[category as Category] ?? CUSTOM_ICON_PATHS;
   return (
     <svg
       viewBox="0 0 24 24"

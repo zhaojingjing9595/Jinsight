@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { CATEGORY_META, formatCurrency } from "@jinsight/core";
-import type { Category } from "@jinsight/core";
 import { CategoryIcon } from "@/components/CategoryIcon";
 
 export type BillRowData = {
@@ -23,6 +22,7 @@ type BillRowProps = {
   onMarkPaid?: (id: string) => Promise<void> | void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => Promise<void> | void;
+  customCategoryColors?: Record<string, string>;
 };
 
 export function daysUntil(dueDate: string): number {
@@ -82,15 +82,18 @@ function recurrenceLabel(bill: BillRowData) {
   }
 }
 
-export function BillRow({ bill, onMarkPaid, onEdit, onDelete }: BillRowProps) {
+export function BillRow({ bill, onMarkPaid, onEdit, onDelete, customCategoryColors }: BillRowProps) {
   const chip = statusChip(bill);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pending, setPending] = useState<null | "paid" | "delete">(null);
   const alreadyPaidThisMonth = paidThisMonth(bill);
   const hasActions = Boolean((!alreadyPaidThisMonth && onMarkPaid) || onEdit || onDelete);
 
-  const cat = (bill.category as Category) ?? "other";
-  const meta = CATEGORY_META[cat] ?? { label: bill.category, color: "#d4d4d4", icon: "📦" };
+  const meta = CATEGORY_META[bill.category as keyof typeof CATEGORY_META] ?? {
+    label: bill.category,
+    color: customCategoryColors?.[bill.category] ?? "#d4d4d4",
+    icon: "📦",
+  };
 
   async function handlePaid() {
     if (!onMarkPaid || alreadyPaidThisMonth) return;
@@ -121,7 +124,7 @@ export function BillRow({ bill, onMarkPaid, onEdit, onDelete }: BillRowProps) {
           className="w-9 h-9 rounded-[10px] border-2 border-ink flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: meta.color }}
         >
-          <CategoryIcon category={cat} size={20} />
+          <CategoryIcon category={bill.category} size={20} />
         </div>
       </div>
 

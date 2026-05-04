@@ -287,7 +287,7 @@ export function BudgetPlanForm() {
                     className="w-9 h-9 flex items-center justify-center border-[1.5px] border-ink rounded-icon flex-none"
                     style={{ backgroundColor: meta.color }}
                   >
-                    <CategoryIcon category={alloc.category as Category} size={20} />
+                    <CategoryIcon category={alloc.category} size={20} />
                   </div>
                   <select
                     value={alloc.category}

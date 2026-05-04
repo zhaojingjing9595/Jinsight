@@ -56,32 +56,8 @@ export function SpendingPieChart({
       return { ...s, start, end };
     });
 
-  return (
-    <svg
-      viewBox="0 0 120 120"
-      className="w-full h-full"
-      preserveAspectRatio="xMidYMid meet"
-      aria-label="Spending breakdown by category"
-    >
-      {arcs.map((a, i) => (
-        <path
-          key={i}
-          d={donutSlicePath(CX, CY, R, INNER_R, a.start, a.end)}
-          fill={a.color}
-          stroke="#111008"
-          strokeWidth="1.5"
-        />
-      ))}
-
-      <circle
-        cx={CX}
-        cy={CY}
-        r={INNER_R - 1}
-        fill="var(--color-base)"
-        stroke="#111008"
-        strokeWidth="1.5"
-      />
-
+  const centerText = (
+    <>
       <text
         x={CX}
         y={CY - 7}
@@ -105,6 +81,43 @@ export function SpendingPieChart({
       >
         {totalLabel}
       </text>
+    </>
+  );
+
+  if (arcs.length === 1) {
+    return (
+      <svg
+        viewBox="0 0 120 120"
+        className="w-full h-full"
+        preserveAspectRatio="xMidYMid meet"
+        aria-label="Spending breakdown by category"
+      >
+        <circle cx={CX} cy={CY} r={R} fill={arcs[0].color} stroke="#111008" strokeWidth="1.5" />
+        <circle cx={CX} cy={CY} r={INNER_R - 1} fill="var(--color-base)" stroke="#111008" strokeWidth="1.5" />
+        {centerText}
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      className="w-full h-full"
+      preserveAspectRatio="xMidYMid meet"
+      aria-label="Spending breakdown by category"
+    >
+      {arcs.map((a, i) => (
+        <path
+          key={i}
+          d={donutSlicePath(CX, CY, R, INNER_R, a.start, a.end)}
+          fill={a.color}
+          stroke="#111008"
+          strokeWidth="1.5"
+        />
+      ))}
+
+      <circle cx={CX} cy={CY} r={INNER_R - 1} fill="var(--color-base)" stroke="#111008" strokeWidth="1.5" />
+      {centerText}
     </svg>
   );
 }

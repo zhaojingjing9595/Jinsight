@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatCurrency } from "@jinsight/core";
-import type { Category, TransactionType } from "@jinsight/core";
+import { formatCurrency, slugifyCustomCategory } from "@jinsight/core";
+import type { TransactionType, CustomCategoryMeta } from "@jinsight/core";
 import { NumPad } from "@/components/NumPad";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { TypeToggle } from "@/components/TypeToggle";
 import { DateStrip } from "@/components/DateStrip";
+import { NewCategoryModal } from "@/components/NewCategoryModal";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 import { formatLocalDateKey, dateKeyToUtcDatetimeISO } from "@/lib/dates";
 
@@ -17,18 +18,44 @@ type AddTransactionFormProps = {
 export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
   const [type, setType] = useState<TransactionType>("EXPENSE");
   const [amount, setAmount] = useState("0");
-  const [category, setCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState(() => formatLocalDateKey(new Date()));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [customCategories, setCustomCategories] = useState<CustomCategoryMeta[]>([]);
+  const [newCatModalOpen, setNewCatModalOpen] = useState(false);
+
+  async function loadCustomCategories() {
+    try {
+      const res = await trpcQuery<{ categories: { id: string; name: string; color: string }[] }>(
+        "categories.list",
+        {},
+      );
+      setCustomCategories(
+        res.categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          slug: slugifyCustomCategory(c.name),
+        })),
+      );
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me")
       .then((data) => setAccountId(data.user.accounts?.[0]?.id ?? null))
       .catch(console.error);
+    loadCustomCategories();
+
+    const onCategoryAdded = () => loadCustomCategories();
+    window.addEventListener("jinsight:category-added", onCategoryAdded);
+    return () => window.removeEventListener("jinsight:category-added", onCategoryAdded);
   }, []);
 
   const displayAmount = formatCurrency(parseFloat(amount) || 0, "ILS");
@@ -97,9 +124,9 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
           value={category}
           onChange={setCategory}
           mode={isExpense ? "expense" : "income"}
-          onAddNew={() => {
-            // TODO: open new-category modal
-          }}
+          customCategories={isExpense ? customCategories : undefined}
+          onAddNew={isExpense ? () => setNewCatModalOpen(true) : undefined}
+          reorderable
         />
       </div>
 
@@ -143,6 +170,7 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
             value={category}
             onChange={setCategory}
             mode={isExpense ? "expense" : "income"}
+            customCategories={isExpense ? customCategories : undefined}
           />
         </div>
       )}
@@ -161,6 +189,15 @@ export function AddTransactionForm({ onSaved }: AddTransactionFormProps) {
       >
         {saved ? "✓ Saved!" : saving ? "Saving..." : `Save ${isExpense ? "Expense" : "Income"}`}
       </button>
+
+      <NewCategoryModal
+        open={newCatModalOpen}
+        onClose={() => setNewCatModalOpen(false)}
+        onCreated={(cat) => {
+          setCustomCategories((prev) => [...prev, cat]);
+          setCategory(cat.slug);
+        }}
+      />
     </div>
   );
 }

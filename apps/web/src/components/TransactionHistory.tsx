@@ -18,10 +18,12 @@ export function TransactionHistory({
   transactions,
   onEdit,
   onDelete,
+  customCategoryColors,
 }: {
   transactions: Transaction[];
   onEdit?: (id: string, patch: EditPatch) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
+  customCategoryColors?: Record<string, string>;
 }) {
   const sorted = [...transactions].sort(
     (a, b) =>
@@ -79,7 +81,7 @@ export function TransactionHistory({
 
       <div className="flex flex-col gap-1.5 md:gap-2 px-2.5 md:px-3 pb-2 md:pb-3">
         {sorted.map((t) => {
-          const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
+          const meta = CATEGORY_META[t.category] ?? { label: t.category, color: customCategoryColors?.[t.category] ?? "#d4d4d4", icon: "📦" };
           const isExpense = t.type === "EXPENSE";
           const isEditing = editingId === t.id;
           const isPending = pendingId === t.id;

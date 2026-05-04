@@ -76,19 +76,31 @@ model User {
 }
 
 model Account {
-  id                    String          @id @default(uuid())
+  id                    String           @id @default(uuid())
   name                  String
-  type                  AccountType     @default(PERSONAL)
-  balance               Float           @default(0)
+  type                  AccountType      @default(PERSONAL)
+  balance               Float            @default(0)
   openingBalance        Float?
   openingBalanceSources Json?
-  createdAt             DateTime        @default(now())
+  createdAt             DateTime         @default(now())
   members               AccountMember[]
   transactions          Transaction[]
   budgets               Budget[]
   bills                 Bill[]
   goals                 Goal[]
   budgetPlans           BudgetPlan[]
+  customCategories      CustomCategory[]
+}
+
+model CustomCategory {
+  id        String   @id @default(cuid())
+  accountId String
+  name      String
+  color     String   @default("#d4d4d4")
+  createdAt DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, name])
 }
 
 model AccountMember {

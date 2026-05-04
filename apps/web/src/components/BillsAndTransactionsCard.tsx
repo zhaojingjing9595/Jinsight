@@ -136,6 +136,7 @@ function TxListMergedRowBill({
   startEditBillPayment,
   saveBillPaymentEdit,
   revertBillPayment,
+  customCategoryColors,
 }: {
   item: Extract<TxListMergedItem, { kind: "bill_payment" }>;
   billActionsEnabled: boolean;
@@ -149,6 +150,7 @@ function TxListMergedRowBill({
   startEditBillPayment: (b: ApiBill) => void;
   saveBillPaymentEdit: (billId: string) => void | Promise<void>;
   revertBillPayment: (billId: string) => void | Promise<void>;
+  customCategoryColors?: Record<string, string>;
 }) {
   const { bill, paidAt } = item;
   const displayAmount = billPaymentDisplayAmount(bill);
@@ -156,7 +158,7 @@ function TxListMergedRowBill({
   const isPending = pendingBillPaymentId === bill.id;
   const meta = CATEGORY_META[bill.category as Transaction["category"]] ?? {
     label: bill.category,
-    color: "#d4d4d4",
+    color: customCategoryColors?.[bill.category] ?? "#d4d4d4",
     icon: "📦",
   };
 
@@ -301,6 +303,7 @@ function TxListMergedRowTransaction({
   startEdit,
   saveEdit,
   handleDelete,
+  customCategoryColors,
 }: {
   item: Extract<TxListMergedItem, { kind: "transaction" }>;
   editingId: string | null;
@@ -315,9 +318,10 @@ function TxListMergedRowTransaction({
   startEdit: (t: Transaction) => void;
   saveEdit: (id: string) => void | Promise<void>;
   handleDelete: (id: string) => void | Promise<void>;
+  customCategoryColors?: Record<string, string>;
 }) {
   const t = item.transaction;
-  const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4", icon: "📦" };
+  const meta = CATEGORY_META[t.category] ?? { label: t.category, color: customCategoryColors?.[t.category] ?? "#d4d4d4", icon: "📦" };
   const isExpense = t.type === "EXPENSE";
   const isEditing = editingId === t.id;
   const isPending = pendingId === t.id;
@@ -453,6 +457,7 @@ export function TransactionsCard({
   onTransactionDelete,
   onBillPaymentAmountEdit,
   onBillPaymentRevert,
+  customCategoryColors,
 }: {
   transactions: Transaction[];
   bills?: ApiBill[];
@@ -462,6 +467,7 @@ export function TransactionsCard({
   onTransactionDelete?: (id: string) => Promise<void> | void;
   onBillPaymentAmountEdit?: (billId: string, amount: number) => Promise<void> | void;
   onBillPaymentRevert?: (billId: string) => Promise<void> | void;
+  customCategoryColors?: Record<string, string>;
 }) {
   const [txFilter, setTxFilter] = useState<TxFilter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -610,6 +616,7 @@ export function TransactionsCard({
                     startEditBillPayment={startEditBillPayment}
                     saveBillPaymentEdit={saveBillPaymentEdit}
                     revertBillPayment={revertBillPayment}
+                    customCategoryColors={customCategoryColors}
                   />
                 ) : (
                   <TxListMergedRowTransaction
@@ -627,6 +634,7 @@ export function TransactionsCard({
                     startEdit={startEdit}
                     saveEdit={saveEdit}
                     handleDelete={handleDelete}
+                    customCategoryColors={customCategoryColors}
                   />
                 ),
               )
@@ -642,10 +650,12 @@ export function BillsCard({
   bills,
   onBillMarkPaid,
   onBillDelete,
+  customCategoryColors,
 }: {
   bills: ApiBill[];
   onBillMarkPaid?: (id: string) => Promise<void> | void;
   onBillDelete?: (id: string) => Promise<void> | void;
+  customCategoryColors?: Record<string, string>;
 }) {
   const [billFilter, setBillFilter] = useState<BillFilter>("all");
   const [billModalOpen, setBillModalOpen] = useState(false);
@@ -780,6 +790,7 @@ export function BillsCard({
                       onMarkPaid={onBillMarkPaid}
                       onEdit={startBillEdit}
                       onDelete={onBillDelete}
+                      customCategoryColors={customCategoryColors}
                     />
                   ))}
                 </div>
@@ -812,6 +823,7 @@ export function BillsAndTransactionsCard({
   onBillDelete,
   onBillPaymentAmountEdit,
   onBillPaymentRevert,
+  customCategoryColors,
 }: {
   bills: ApiBill[];
   transactions: Transaction[];
@@ -823,6 +835,7 @@ export function BillsAndTransactionsCard({
   onBillDelete?: (id: string) => Promise<void> | void;
   onBillPaymentAmountEdit?: (billId: string, amount: number) => Promise<void> | void;
   onBillPaymentRevert?: (billId: string) => Promise<void> | void;
+  customCategoryColors?: Record<string, string>;
 }) {
   const [tab, setTab] = useState<"transactions" | "bills">("transactions");
   const [txFilter, setTxFilter] = useState<TxFilter>("all");
@@ -1037,6 +1050,7 @@ export function BillsAndTransactionsCard({
                         startEditBillPayment={startEditBillPayment}
                         saveBillPaymentEdit={saveBillPaymentEdit}
                         revertBillPayment={revertBillPayment}
+                        customCategoryColors={customCategoryColors}
                       />
                     ) : (
                       <TxListMergedRowTransaction
@@ -1054,6 +1068,7 @@ export function BillsAndTransactionsCard({
                         startEdit={startEdit}
                         saveEdit={saveEdit}
                         handleDelete={handleDelete}
+                        customCategoryColors={customCategoryColors}
                       />
                     ),
                   )
@@ -1148,6 +1163,7 @@ export function BillsAndTransactionsCard({
                         onMarkPaid={onBillMarkPaid}
                         onEdit={startBillEdit}
                         onDelete={onBillDelete}
+                        customCategoryColors={customCategoryColors}
                       />
                     ))}
                   </div>

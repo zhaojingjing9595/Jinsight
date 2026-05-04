@@ -63,26 +63,57 @@ export const CATEGORY_META: Record<Category, CategoryMeta> = {
 
 export const CATEGORY_LIST: Category[] = Object.keys(CATEGORY_META) as Category[];
 
-export function getCategoryMeta(category: Category): CategoryMeta {
-  return CATEGORY_META[category];
+export type CustomCategoryMeta = {
+  id: string;
+  name: string;
+  color: string;
+  /** The key stored in Transaction.category / Bill.category */
+  slug: string;
+};
+
+/** Derives the stored category key from a custom category name. */
+export function slugifyCustomCategory(name: string): string {
+  return "custom_" + name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
-export function getCategoryColor(category: Category): string {
-  return CATEGORY_META[category].color;
+/** Returns true if the key belongs to a custom (user-created) category. */
+export function isCustomCategory(key: string): boolean {
+  return key.startsWith("custom_");
 }
 
-export function getCategoryIcon(category: Category): string {
-  return CATEGORY_META[category].icon;
+/** Derives a readable label from a custom category slug when no DB record is available. */
+function customCategoryFallbackLabel(slug: string): string {
+  return slug
+    .slice("custom_".length)
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
-export function getCategoryLabel(category: Category): string {
-  return CATEGORY_META[category].label;
+export function getCategoryMeta(category: string): CategoryMeta {
+  return CATEGORY_META[category as Category] ?? { label: getCategoryLabel(category), color: "#d4d4d4", icon: "📦" };
 }
 
-export function isIncomeCategory(category: Category): category is IncomeCategory {
+export function getCategoryColor(category: string): string {
+  return CATEGORY_META[category as Category]?.color ?? "#d4d4d4";
+}
+
+export function getCategoryIcon(category: string): string {
+  return CATEGORY_META[category as Category]?.icon ?? "📦";
+}
+
+export function getCategoryLabel(category: string): string {
+  const meta = CATEGORY_META[category as Category];
+  if (meta) return meta.label;
+  if (isCustomCategory(category)) return customCategoryFallbackLabel(category);
+  return category;
+}
+
+export function isIncomeCategory(category: string): category is IncomeCategory {
   return INCOME_CATEGORY_ORDER.includes(category as IncomeCategory);
 }
 
-export function isExpenseCategory(category: Category): category is ExpenseCategory {
+export function isExpenseCategory(category: string): category is ExpenseCategory {
   return EXPENSE_CATEGORY_ORDER.includes(category as ExpenseCategory);
 }

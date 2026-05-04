@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatCurrency, CATEGORY_META } from "@jinsight/core";
+import { formatCurrency, CATEGORY_META, slugifyCustomCategory } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { MonthlyBarChart } from "@/components/MonthlyBarChart";
@@ -52,11 +52,11 @@ type CategoryGroup = {
   transactions: Transaction[];
 };
 
-function groupByCategory(transactions: Transaction[]): CategoryGroup[] {
+function groupByCategory(transactions: Transaction[], customColorMap: Record<string, string> = {}): CategoryGroup[] {
   const map: Record<string, CategoryGroup> = {};
   for (const t of transactions) {
     if (t.type !== "EXPENSE") continue;
-    const meta = CATEGORY_META[t.category] ?? { label: t.category, color: "#d4d4d4" };
+    const meta = CATEGORY_META[t.category] ?? { label: t.category, color: customColorMap[t.category] ?? "#d4d4d4" };
     if (!map[t.category]) {
       map[t.category] = { category: t.category, label: meta.label, color: meta.color, total: 0, transactions: [] };
     }
@@ -79,6 +79,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [customColorMap, setCustomColorMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function init() {
@@ -87,6 +88,19 @@ export default function HistoryPage() {
         const acct = me.user.accounts?.[0];
         if (!acct) return;
         setAccountId(acct.id);
+
+        // Fetch custom categories separately
+        try {
+          const customCatsData = await trpcQuery<{ categories: { name: string; color: string }[] }>("categories.list", {});
+          const colorMap: Record<string, string> = Object.fromEntries(
+            customCatsData.categories.map((c) => [slugifyCustomCategory(c.name), c.color]),
+          );
+          setCustomColorMap(colorMap);
+        } catch (err) {
+          console.warn("Failed to load custom categories:", err);
+          setCustomColorMap({});
+        }
+
         await fetchAllMonths(acct.id);
       } catch (err) {
         console.error("History load error:", err);
@@ -117,7 +131,7 @@ export default function HistoryPage() {
     // Default: current month categories expanded, past collapsed
     const defaults: Record<string, boolean> = {};
     const currentKey = `${sixMonths[currentMonthIdx].year}-${sixMonths[currentMonthIdx].month}`;
-    const currentGroups = groupByCategory(map[currentKey] ?? []);
+    const currentGroups = groupByCategory(map[currentKey] ?? [], colorMap);
     currentGroups.forEach((g) => { defaults[`${currentKey}-${g.category}`] = true; });
     setExpandedCategories(defaults);
   }
@@ -125,7 +139,7 @@ export default function HistoryPage() {
   const selected = sixMonths[selectedIdx];
   const selectedKey = `${selected.year}-${selected.month}`;
   const selectedTxns = monthlyTransactions[selectedKey] ?? [];
-  const categoryGroups = groupByCategory(selectedTxns);
+  const categoryGroups = groupByCategory(selectedTxns, customColorMap);
 
   const chartData = sixMonths.map((m) => {
     const txns = monthlyTransactions[`${m.year}-${m.month}`] ?? [];
@@ -176,7 +190,7 @@ export default function HistoryPage() {
                 setSelectedIdx(i);
                 // Auto-expand categories for newly selected month
                 const key = `${m.year}-${m.month}`;
-                const groups = groupByCategory(monthlyTransactions[key] ?? []);
+                const groups = groupByCategory(monthlyTransactions[key] ?? [], customColorMap);
                 setExpandedCategories((prev) => {
                   const next = { ...prev };
                   groups.forEach((g) => {
@@ -244,7 +258,7 @@ export default function HistoryPage() {
                     className="flex-none w-8 h-8 rounded-[8px] border-2 border-ink flex items-center justify-center"
                     style={{ backgroundColor: group.color }}
                   >
-                    <CategoryIcon category={group.category as Parameters<typeof CategoryIcon>[0]["category"]} size={16} strokeWidth={2} />
+                    <CategoryIcon category={group.category} size={16} strokeWidth={2} />
                   </div>
                   <span className="font-body flex-1 text-left text-[13px] font-[700] text-ink">
                     {group.label}

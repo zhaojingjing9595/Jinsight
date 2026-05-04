@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatCurrency, CATEGORY_META } from "@jinsight/core";
+import { formatCurrency, CATEGORY_META, slugifyCustomCategory } from "@jinsight/core";
 import type { Transaction } from "@jinsight/core";
 import { BottomNav } from "@/components/BottomNav";
 import { ChartSection } from "@/components/ChartSection";
@@ -64,10 +64,23 @@ export default function DashboardPage() {
   const [bills, setBills] = useState<ApiBill[]>([]);
   const [loading, setLoading] = useState(true);
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
+  const [customColorMap, setCustomColorMap] = useState<Record<string, string>>({});
 
   async function reloadBills() {
     const billsData = await trpcQuery<{ bills: ApiBill[] }>("bills.list", {});
     setBills(billsData.bills);
+
+    // Also refresh custom categories in case any were added
+    try {
+      const customCatsData = await trpcQuery<{ categories: { name: string; color: string }[] }>("categories.list", {});
+      setCustomColorMap(
+        Object.fromEntries(
+          customCatsData.categories.map((c) => [slugifyCustomCategory(c.name), c.color]),
+        ),
+      );
+    } catch (err) {
+      console.warn("Failed to refresh custom categories:", err);
+    }
   }
 
   useEffect(() => {
@@ -99,6 +112,19 @@ export default function DashboardPage() {
 
         setTransactions(txData.transactions.map(toTransaction));
         setBills(billsData.bills);
+
+        // Fetch custom categories separately so it doesn't break bills loading
+        try {
+          const customCatsData = await trpcQuery<{ categories: { name: string; color: string }[] }>("categories.list", {});
+          setCustomColorMap(
+            Object.fromEntries(
+              customCatsData.categories.map((c) => [slugifyCustomCategory(c.name), c.color]),
+            ),
+          );
+        } catch (err) {
+          console.warn("Failed to load custom categories:", err);
+          setCustomColorMap({});
+        }
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
       } finally {
@@ -129,12 +155,13 @@ export default function DashboardPage() {
     ? openingBalance + totalIncome - totalExpenses
     : balance;
 
-  const spentRatio = totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0;
+  const isEmpty = totalIncome === 0 && totalExpenses === 0;
+  const isOverspent = totalExpenses > totalIncome;
 
   const categoryTotals = transactions
     .filter((t) => t.type === "EXPENSE")
     .reduce<Record<string, { amount: number; color: string; label: string }>>((acc, t) => {
-      const meta = CATEGORY_META[t.category] ?? { color: "#d4d4d4", label: t.category };
+      const meta = CATEGORY_META[t.category] ?? { color: customColorMap[t.category] ?? "#d4d4d4", label: t.category };
       if (!acc[t.category]) {
         acc[t.category] = { amount: 0, color: meta.color, label: meta.label };
       }
@@ -205,23 +232,34 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="h-[12px] md:h-[14px] rounded-[30px] overflow-hidden relative bg-income">
-              <div
-                className="absolute left-0 top-0 h-full bg-alert"
-                style={{ width: `${spentRatio}%`, borderRadius: "27px 0 0 27px" }}
-              />
-              <div
-                className="absolute top-0 bottom-0 w-[2.5px] bg-transparent"
-                style={{ left: `${spentRatio}%` }}
-              />
-            </div>
+            {isEmpty ? (
+              <div className="h-[12px] md:h-[14px] rounded-[30px] bg-white/20" />
+            ) : isOverspent ? (
+              <div className="h-[12px] md:h-[14px] rounded-[30px] overflow-hidden relative bg-alert">
+                {totalIncome > 0 && (
+                  <div
+                    className="absolute left-0 top-0 h-full bg-income"
+                    style={{ width: `${(totalIncome / totalExpenses) * 100}%`, borderRadius: "27px 0 0 27px" }}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="h-[12px] md:h-[14px] rounded-[30px] overflow-hidden relative bg-income">
+                <div
+                  className="absolute left-0 top-0 h-full bg-alert"
+                  style={{ width: `${(totalExpenses / totalIncome) * 100}%`, borderRadius: "27px 0 0 27px" }}
+                />
+              </div>
+            )}
 
             <div className="flex justify-between items-center gap-1 text-[8px] md:text-[10px]">
               <p className="font-body font-semibold text-white leading-tight">
                 {formatCurrency(totalExpenses, "ILS")}
               </p>
               <p className="font-body text-[7px] md:text-[9px] font-semibold text-white/90 whitespace-nowrap">
-                {formatCurrency(totalIncome - totalExpenses, "ILS")} left
+                {isOverspent
+                  ? `${formatCurrency(totalExpenses - totalIncome, "ILS")} over`
+                  : `${formatCurrency(totalIncome - totalExpenses, "ILS")} left`}
               </p>
               <p className="font-body font-semibold text-white leading-tight">
                 {formatCurrency(totalIncome, "ILS")}
@@ -254,6 +292,7 @@ export default function DashboardPage() {
             transactions={transactions}
             transactionsListMonth={currentMonth}
             transactionsListYear={currentYear}
+            customCategoryColors={customColorMap}
             onTransactionEdit={async (id, patch) => {
               const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
                 "transactions.update",
@@ -293,6 +332,7 @@ export default function DashboardPage() {
             transactions={transactions}
             transactionsListMonth={currentMonth}
             transactionsListYear={currentYear}
+            customCategoryColors={customColorMap}
             onTransactionEdit={async (id, patch) => {
               const { transaction } = await trpcMutate<{ transaction: ApiTransaction }>(
                 "transactions.update",
@@ -317,6 +357,7 @@ export default function DashboardPage() {
           />
           <BillsCard
             bills={bills}
+            customCategoryColors={customColorMap}
             onBillMarkPaid={async (id) => {
               await trpcMutate("bills.markPaid", { id });
               await reloadBills();

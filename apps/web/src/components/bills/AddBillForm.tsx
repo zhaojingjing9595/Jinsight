@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Category } from "@jinsight/core";
+import { slugifyCustomCategory } from "@jinsight/core";
+import type { CustomCategoryMeta } from "@jinsight/core";
 import { trpcMutate, trpcQuery } from "@/lib/api";
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { NewCategoryModal } from "@/components/NewCategoryModal";
 
 type Recurrence = "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
 
@@ -12,15 +14,6 @@ const RECURRENCE_OPTIONS: { value: Recurrence; label: string }[] = [
   { value: "ANNUAL", label: "Annual" },
   { value: "WEEKLY", label: "Weekly" },
   { value: "CUSTOM", label: "Custom" },
-];
-
-const BILL_CATEGORIES: Category[] = [
-  "utilities",
-  "subscriptions",
-  "rent",
-  "transport",
-  "education",
-  "other",
 ];
 
 type Bill = {
@@ -51,13 +44,40 @@ export function AddBillForm({ accountId: accountIdProp, initial, onSaved }: AddB
   const editing = Boolean(initial?.id);
 
   const [resolvedAccountId, setResolvedAccountId] = useState<string | null>(accountIdProp ?? null);
+  const [customCategories, setCustomCategories] = useState<CustomCategoryMeta[]>([]);
+  const [newCatModalOpen, setNewCatModalOpen] = useState(false);
+
+  async function loadCustomCategories() {
+    try {
+      const res = await trpcQuery<{ categories: { id: string; name: string; color: string }[] }>(
+        "categories.list",
+        {},
+      );
+      setCustomCategories(
+        res.categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          slug: slugifyCustomCategory(c.name),
+        })),
+      );
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
-    if (accountIdProp || editing) return;
-    trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me").then((me) => {
-      const id = me.user.accounts?.[0]?.id;
-      if (id) setResolvedAccountId(id);
-    }).catch(() => {});
+    if (!accountIdProp && !editing) {
+      trpcQuery<{ user: { accounts: { id: string }[] } }>("users.me").then((me) => {
+        const id = me.user.accounts?.[0]?.id;
+        if (id) setResolvedAccountId(id);
+      }).catch(() => {});
+    }
+    loadCustomCategories();
+
+    const onCategoryAdded = () => loadCustomCategories();
+    window.addEventListener("jinsight:category-added", onCategoryAdded);
+    return () => window.removeEventListener("jinsight:category-added", onCategoryAdded);
   }, [accountIdProp, editing]);
 
   const [name, setName] = useState(initial?.name ?? "");
@@ -67,7 +87,7 @@ export function AddBillForm({ accountId: accountIdProp, initial, onSaved }: AddB
   const [dueDate, setDueDate] = useState(
     initial?.dueDate ? new Date(initial.dueDate).toISOString().split("T")[0] : todayPlus(7),
   );
-  const [category, setCategory] = useState<Category>((initial?.category as Category) ?? "utilities");
+  const [category, setCategory] = useState<string>((initial?.category) ?? "utilities");
   const [recurrence, setRecurrence] = useState<Recurrence>(initial?.recurrence ?? "MONTHLY");
   const [isRecurring, setIsRecurring] = useState(initial?.isRecurring ?? true);
   const [isSubscription, setIsSubscription] = useState(initial?.isSubscription ?? false);
@@ -169,7 +189,9 @@ export function AddBillForm({ accountId: accountIdProp, initial, onSaved }: AddB
           value={category}
           onChange={setCategory}
           mode="expense"
-          categories={BILL_CATEGORIES}
+          customCategories={customCategories}
+          onAddNew={() => setNewCatModalOpen(true)}
+          reorderable
         />
       </div>
 
@@ -235,6 +257,15 @@ export function AddBillForm({ accountId: accountIdProp, initial, onSaved }: AddB
       >
         {saved ? "✓ Saved!" : saving ? "Saving..." : editing ? "Update Bill" : "Save Bill"}
       </button>
+
+      <NewCategoryModal
+        open={newCatModalOpen}
+        onClose={() => setNewCatModalOpen(false)}
+        onCreated={(cat) => {
+          setCustomCategories((prev) => [...prev, cat]);
+          setCategory(cat.slug);
+        }}
+      />
     </div>
   );
 }
