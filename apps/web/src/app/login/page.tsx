@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -27,6 +27,29 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
       return;
+    }
+
+    // Guard: if the user authenticated but never completed signup (no Prisma profile),
+    // sign them out and send them to signup rather than letting them into a broken state.
+    if (data.session) {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/trpc/auth.status`,
+          {
+            headers: { Authorization: `Bearer ${data.session.access_token}` },
+          },
+        );
+        const json = await res.json() as { result?: { data?: { json?: { provisioned?: boolean } } } };
+        const provisioned = json?.result?.data?.json?.provisioned;
+        if (!provisioned) {
+          await supabase.auth.signOut();
+          setError("No account found for this email. Please sign up first.");
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // If status check fails, allow login through — profile errors surface on dashboard.
+      }
     }
 
     router.push("/dashboard");

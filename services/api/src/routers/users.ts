@@ -10,20 +10,20 @@ export const usersRouter = router({
       where: { id: ctx.userId },
       include: { accountMembers: { include: { account: true } } },
     });
-    // Flatten to match existing API shape (user.accounts)
-    const shaped = user ? {
-      ...user,
-      accounts: user.accountMembers.map((m) => m.account),
-    } : null;
 
-    if (!shaped) {
+    if (!user) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "User profile not found. Call auth.register first.",
       });
     }
 
-    return { user: shaped };
+    return {
+      user: {
+        ...user,
+        accounts: user.accountMembers.map((m) => m.account),
+      },
+    };
   }),
 
   /** Update display name, preferred currency, or persona tag. */
