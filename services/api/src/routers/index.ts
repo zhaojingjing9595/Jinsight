@@ -5,6 +5,7 @@ import { transactionsRouter } from "./transactions";
 import { budgetsRouter } from "./budgets";
 import { budgetPlansRouter } from "./budgetPlans";
 import { goalsRouter } from "./goals";
+import { goalMilestonesRouter } from "./goalMilestones";
 import { billsRouter } from "./bills";
 import { usersRouter } from "./users";
 import { categoriesRouter } from "./categories";
@@ -17,6 +18,7 @@ export const appRouter = router({
   budgets: budgetsRouter,
   budgetPlans: budgetPlansRouter,
   goals: goalsRouter,
+  goalMilestones: goalMilestonesRouter,
   bills: billsRouter,
   categories: categoriesRouter,
 });

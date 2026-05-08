@@ -126,11 +126,13 @@ model Transaction {
   isRecurring       Boolean     @default(false)
   budgetPlanId      String?
   goalId            String?
+  billId            String?
   excludeFromBudget Boolean     @default(false)
   createdAt         DateTime    @default(now())
   account           Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   budgetPlan        BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
   goal              Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  bill              Bill?       @relation(fields: [billId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
@@ -187,22 +189,36 @@ model BudgetPlanCategory {
 }
 
 model Goal {
-  id           String        @id @default(uuid())
+  id           String          @id @default(uuid())
   accountId    String
-  type         GoalType      @default(CUSTOM)
+  type         GoalType        @default(CUSTOM)
   name         String
-  emoji        String        @default("🎯")
+  emoji        String          @default("🎯")
   targetAmount Float
-  savedAmount  Float         @default(0)
-  startDate    DateTime?
+  startDate    DateTime        @default(now())
   endDate      DateTime?
-  status       GoalStatus    @default(PLANNING)
+  status       GoalStatus      @default(PLANNING)
   spendingPlan Json?
   createdBy    String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  account      Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  milestones   GoalMilestone[]
+}
+
+model GoalMilestone {
+  id         String    @id @default(cuid())
+  goalId     String
+  year       Int
+  month      Int
+  amount     Float
+  isAchieved Boolean   @default(false)
+  achievedAt DateTime?
+  createdAt  DateTime  @default(now())
+  goal       Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, year, month])
 }
 
 model Bill {
@@ -222,4 +238,5 @@ model Bill {
   lastPaidAmount Float?
   createdAt      DateTime       @default(now())
   account        Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
 }

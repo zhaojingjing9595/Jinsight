@@ -7,15 +7,27 @@ export type SpendingPlanItem = {
   actual: number;
 };
 
+export type GoalMilestone = {
+  id: string;
+  goalId: string;
+  year: number;
+  month: number;
+  amount: number;
+  isAchieved: boolean;
+  achievedAt: string | null;
+  createdAt: string;
+};
+
 export type Goal = {
   id: string;
-  userId: string;
+  accountId: string;
   type: GoalType;
   name: string;
   emoji: string;
   targetAmount: number;
+  /** Computed by API: sum of achieved milestone amounts */
   savedAmount: number;
-  startDate: string | null;
+  startDate: string;
   endDate: string | null;
   status: GoalStatus;
   spendingPlan: SpendingPlanItem[] | null;

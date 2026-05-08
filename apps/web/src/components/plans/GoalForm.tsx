@@ -12,6 +12,7 @@ export type GoalFormData = {
   name: string;
   emoji: string;
   targetAmount: number;
+  startDate: string;
   endDate: string | null;
   spendingPlan: SpendingPlanItem[] | null;
 };
@@ -167,14 +168,18 @@ function StepDetails({
   );
 }
 
-/* Step 3: Target date */
+/* Step 3: Start date + target date */
 function StepDate({
   goalType,
+  startDate,
   endDate,
+  onStartDateChange,
   onEndDateChange,
 }: {
   goalType: GoalType;
+  startDate: string;
   endDate: string;
+  onStartDateChange: (d: string) => void;
   onEndDateChange: (d: string) => void;
 }) {
   const isEmergency = goalType === "EMERGENCY";
@@ -182,8 +187,20 @@ function StepDate({
   return (
     <div className="flex flex-col gap-4">
       <h3 className="font-display font-black text-[18px] text-ink uppercase tracking-[0.5px]">
-        {isEmergency ? "No deadline needed" : "When do you need this?"}
+        {isEmergency ? "When does it start?" : "When does it start and end?"}
       </h3>
+
+      <div>
+        <label className="font-body block text-[10px] font-bold uppercase tracking-[2px] mb-1 text-ink">
+          Start Date
+        </label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => onStartDateChange(e.target.value)}
+          className="w-full px-3 py-2.5 border-2 border-ink rounded-[8px] bg-base font-body text-[14px] text-ink focus:outline-none focus:shadow-neo-xs"
+        />
+      </div>
 
       {isEmergency ? (
         <div className="p-4 border-2 border-ink rounded-[12px] bg-[#cce972]/20">
@@ -200,7 +217,7 @@ function StepDate({
             type="date"
             value={endDate}
             onChange={(e) => onEndDateChange(e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
+            min={startDate || new Date().toISOString().split("T")[0]}
             className="w-full px-3 py-2.5 border-2 border-ink rounded-[8px] bg-base font-body text-[14px] text-ink focus:outline-none focus:shadow-neo-xs"
           />
         </div>
@@ -318,6 +335,7 @@ export function GoalForm({ onSave, onClose }: GoalFormProps) {
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("🎯");
   const [amount, setAmount] = useState("0");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
   const [spendingPlan, setSpendingPlan] = useState<SpendingPlanItem[]>([]);
 
@@ -332,7 +350,7 @@ export function GoalForm({ onSave, onClose }: GoalFormProps) {
     switch (step) {
       case 0: return true;
       case 1: return name.trim().length > 0 && amountNum > 0;
-      case 2: return isEmergency || endDate.length > 0;
+      case 2: return startDate.length > 0 && (isEmergency || endDate.length > 0);
       case 3: return true; // spending plan is optional
       default: return false;
     }
@@ -357,6 +375,7 @@ export function GoalForm({ onSave, onClose }: GoalFormProps) {
       name: name.trim(),
       emoji,
       targetAmount: amountNum,
+      startDate: new Date(startDate).toISOString(),
       endDate: isEmergency ? null : endDate ? new Date(endDate).toISOString() : null,
       spendingPlan: planData,
     });
@@ -405,7 +424,9 @@ export function GoalForm({ onSave, onClose }: GoalFormProps) {
           {step === 2 && (
             <StepDate
               goalType={type}
+              startDate={startDate}
               endDate={endDate}
+              onStartDateChange={setStartDate}
               onEndDateChange={setEndDate}
             />
           )}

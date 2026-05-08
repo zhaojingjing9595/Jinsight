@@ -19,6 +19,7 @@ type ApiTransaction = {
   date: string;
   isRecurring: boolean;
   createdAt: string;
+  billId?: string | null;
 };
 
 function toTransaction(t: ApiTransaction): Transaction {
@@ -303,12 +304,16 @@ export default function DashboardPage() {
               );
             }}
             onTransactionDelete={async (id) => {
+              const tx = transactions.find((t) => t.id === id);
               await trpcMutate("transactions.delete", { id });
               setTransactions((prev) => prev.filter((t) => t.id !== id));
+              if (tx?.billId) {
+                await reloadBills();
+              }
             }}
             onBillMarkPaid={async (id) => {
               await trpcMutate("bills.markPaid", { id });
-              await reloadBills();
+              window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
             }}
             onBillDelete={async (id) => {
               await trpcMutate("bills.delete", { id });
@@ -343,8 +348,12 @@ export default function DashboardPage() {
               );
             }}
             onTransactionDelete={async (id) => {
+              const tx = transactions.find((t) => t.id === id);
               await trpcMutate("transactions.delete", { id });
               setTransactions((prev) => prev.filter((t) => t.id !== id));
+              if (tx?.billId) {
+                await reloadBills();
+              }
             }}
             onBillPaymentAmountEdit={async (billId, amount) => {
               await trpcMutate("bills.updatePaymentAmount", { id: billId, amount });
@@ -360,7 +369,7 @@ export default function DashboardPage() {
             customCategoryColors={customColorMap}
             onBillMarkPaid={async (id) => {
               await trpcMutate("bills.markPaid", { id });
-              await reloadBills();
+              window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
             }}
             onBillDelete={async (id) => {
               await trpcMutate("bills.delete", { id });

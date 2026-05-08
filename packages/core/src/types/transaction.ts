@@ -35,6 +35,7 @@ export type Transaction = {
   date: Date;
   isRecurring: boolean;
   createdAt: Date;
+  billId?: string | null;
 };
 
 export type TransactionInput = Omit<Transaction, "id" | "createdAt">;

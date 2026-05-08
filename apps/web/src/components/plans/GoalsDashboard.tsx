@@ -68,7 +68,7 @@ export function GoalsDashboard() {
         name: data.name,
         emoji: data.emoji,
         targetAmount: data.targetAmount,
-        savedAmount: 0,
+        startDate: data.startDate,
         endDate: data.endDate ?? undefined,
         status: "SAVING",
         spendingPlan: data.spendingPlan ?? undefined,

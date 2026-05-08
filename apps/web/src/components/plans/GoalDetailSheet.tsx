@@ -8,7 +8,7 @@ import {
   computeGoalProgress,
   getGoalHealthStatus,
 } from "@jinsight/core";
-import type { Goal, GoalStatus, SpendingPlanItem } from "@jinsight/core";
+import type { Goal, GoalStatus, GoalMilestone, SpendingPlanItem } from "@jinsight/core";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 import { GoalStatusChip } from "./GoalStatusChip";
 import { NumPad } from "@/components/NumPad";
@@ -30,7 +30,9 @@ type GoalDetailSheetProps = {
   onUpdated: () => void;
 };
 
-type Tab = "overview" | "spending" | "transactions";
+type Tab = "overview" | "monthly" | "spending" | "transactions";
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const TRIP_CATEGORIES = ["Flights", "Hotel", "Food", "Activities", "Shopping", "Transport", "Other"];
 
@@ -45,14 +47,7 @@ function ProgressRing({ percent, size = 80 }: { percent: number; size?: number }
 
   return (
     <svg width={size} height={size} className="rotate-[-90deg]">
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="#e5e5e0"
-        strokeWidth={stroke}
-      />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e5e0" strokeWidth={stroke} />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -69,20 +64,370 @@ function ProgressRing({ percent, size = 80 }: { percent: number; size?: number }
   );
 }
 
+/* ── Monthly Breakdown Tab ── */
+
+function MonthlyTab({
+  goal,
+  milestones,
+  onMilestonesChanged,
+}: {
+  goal: Goal;
+  milestones: GoalMilestone[];
+  onMilestonesChanged: () => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addYear, setAddYear] = useState(new Date().getFullYear());
+  const [addMonth, setAddMonth] = useState(new Date().getMonth() + 1);
+  const [addAmount, setAddAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const existingKeys = new Set(milestones.map((m) => `${m.year}-${m.month}`));
+
+  async function handleMarkAchieved(id: string, isAchieved: boolean) {
+    setSaving(true);
+    try {
+      const proc = isAchieved ? "goalMilestones.unmarkAchieved" : "goalMilestones.markAchieved";
+      await trpcMutate(proc, { id });
+      onMilestonesChanged();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveAmount(id: string) {
+    const val = parseFloat(editAmount);
+    if (isNaN(val) || val < 0) return;
+    setSaving(true);
+    try {
+      await trpcMutate("goalMilestones.updateAmount", { id, amount: val });
+      setEditingId(null);
+      onMilestonesChanged();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setSaving(true);
+    try {
+      await trpcMutate("goalMilestones.delete", { id });
+      setMenuOpenId(null);
+      onMilestonesChanged();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAddMilestone() {
+    const val = parseFloat(addAmount);
+    if (isNaN(val) || val < 0) return;
+    setSaving(true);
+    try {
+      await trpcMutate("goalMilestones.create", {
+        goalId: goal.id,
+        year: addYear,
+        month: addMonth,
+        amount: val,
+      });
+      setAddOpen(false);
+      setAddAmount("");
+      onMilestonesChanged();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (milestones.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-10 gap-3">
+        <span className="text-[32px]">📅</span>
+        <p className="font-body text-[13px] font-bold text-muted text-center">
+          No monthly breakdown yet.
+        </p>
+        <p className="font-body text-[11px] text-muted text-center">
+          Set a start and end date to auto-generate your monthly plan.
+        </p>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="mt-2 px-4 py-2 border-[2px] border-ink rounded-[10px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+        >
+          + Add a Month
+        </button>
+        {addOpen && (
+          <AddMonthForm
+            existingKeys={existingKeys}
+            addYear={addYear}
+            addMonth={addMonth}
+            addAmount={addAmount}
+            saving={saving}
+            onYearChange={setAddYear}
+            onMonthChange={setAddMonth}
+            onAmountChange={setAddAmount}
+            onSave={handleAddMilestone}
+            onCancel={() => setAddOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 pt-2">
+      {/* Add button */}
+      <button
+        type="button"
+        onClick={() => setAddOpen((v) => !v)}
+        className="self-start px-3 py-1.5 border-[1.5px] border-dashed border-primary/60 rounded-[20px] font-body text-[10px] font-black uppercase tracking-[1px] text-primary active:bg-primary/5"
+      >
+        + Add an Achievement
+      </button>
+
+      {addOpen && (
+        <AddMonthForm
+          existingKeys={existingKeys}
+          addYear={addYear}
+          addMonth={addMonth}
+          addAmount={addAmount}
+          saving={saving}
+          onYearChange={setAddYear}
+          onMonthChange={setAddMonth}
+          onAmountChange={setAddAmount}
+          onSave={handleAddMilestone}
+          onCancel={() => setAddOpen(false)}
+        />
+      )}
+
+      {/* Milestone rows */}
+      {milestones.map((m) => (
+        <div
+          key={m.id}
+          className={`relative flex items-center gap-3 p-3 border-2 border-ink rounded-[12px] transition-colors ${
+            m.isAchieved ? "bg-[#2ad2a3]/10" : "bg-base"
+          }`}
+        >
+          {/* Month label */}
+          <div className="flex-none w-[52px] text-center">
+            <p className="font-display font-black text-[15px] text-ink leading-tight">
+              {MONTH_NAMES[m.month - 1]}
+            </p>
+            <p className="font-body text-[9px] font-bold text-muted">{m.year}</p>
+          </div>
+
+          {/* Amount or edit field */}
+          <div className="flex-1 min-w-0">
+            {editingId === m.id ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  className="w-[100px] px-2 py-1 border-2 border-ink rounded-[6px] bg-[#fff9e6] font-display font-black text-[15px] text-ink focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSaveAmount(m.id)}
+                  disabled={saving}
+                  className="font-body text-[10px] font-bold text-primary px-1"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="font-body text-[10px] font-bold text-muted px-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p className={`font-display font-black text-[17px] ${m.isAchieved ? "text-income" : "text-ink"}`}>
+                {formatCurrency(m.amount, "ILS")}
+              </p>
+            )}
+            {m.isAchieved && m.achievedAt && (
+              <p className="font-body text-[9px] text-income font-bold">
+                Achieved {new Date(m.achievedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </p>
+            )}
+          </div>
+
+          {/* Mark achieved button */}
+          <button
+            type="button"
+            onClick={() => handleMarkAchieved(m.id, m.isAchieved)}
+            disabled={saving}
+            className={`flex-none w-[28px] h-[28px] flex items-center justify-center border-[2px] border-ink rounded-full font-bold text-[13px] transition-all active:scale-95 disabled:opacity-40 ${
+              m.isAchieved
+                ? "bg-income text-white"
+                : "bg-base text-muted"
+            }`}
+            title={m.isAchieved ? "Unmark" : "Mark achieved"}
+          >
+            ✓
+          </button>
+
+          {/* 3-dot menu */}
+          {!m.isAchieved && (
+            <div className="relative flex-none">
+              <button
+                type="button"
+                onClick={() => setMenuOpenId(menuOpenId === m.id ? null : m.id)}
+                className="w-[28px] h-[28px] flex items-center justify-center border-[1.5px] border-ink rounded-full font-bold text-[11px] text-muted bg-base active:bg-[#f0f0ea]"
+              >
+                ···
+              </button>
+              {menuOpenId === m.id && (
+                <div className="absolute right-0 top-[32px] z-10 w-[120px] border-2 border-ink rounded-[10px] bg-base shadow-neo-sm overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(m.id);
+                      setEditAmount(String(m.amount));
+                      setMenuOpenId(null);
+                    }}
+                    className="w-full text-left px-3 py-2 font-body text-[11px] font-bold text-ink hover:bg-[#f5f5f0]"
+                  >
+                    Edit amount
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(m.id)}
+                    disabled={saving}
+                    className="w-full text-left px-3 py-2 font-body text-[11px] font-bold text-alert hover:bg-alert/5 disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AddMonthForm({
+  existingKeys,
+  addYear,
+  addMonth,
+  addAmount,
+  saving,
+  onYearChange,
+  onMonthChange,
+  onAmountChange,
+  onSave,
+  onCancel,
+}: {
+  existingKeys: Set<string>;
+  addYear: number;
+  addMonth: number;
+  addAmount: string;
+  saving: boolean;
+  onYearChange: (y: number) => void;
+  onMonthChange: (m: number) => void;
+  onAmountChange: (a: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const isDuplicate = existingKeys.has(`${addYear}-${addMonth}`);
+  const val = parseFloat(addAmount);
+  const canSave = !isDuplicate && !isNaN(val) && val >= 0;
+
+  return (
+    <div className="p-3 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-sm flex flex-col gap-3">
+      <p className="font-display font-black text-[14px] text-ink uppercase tracking-[0.5px]">Add a Month</p>
+
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Month</label>
+          <select
+            value={addMonth}
+            onChange={(e) => onMonthChange(Number(e.target.value))}
+            className="w-full px-2 py-1.5 border-2 border-ink rounded-[8px] bg-base font-body text-[12px] text-ink focus:outline-none"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={name} value={i + 1}>{name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Year</label>
+          <input
+            type="number"
+            value={addYear}
+            onChange={(e) => onYearChange(Number(e.target.value))}
+            min={2020}
+            max={2100}
+            className="w-full px-2 py-1.5 border-2 border-ink rounded-[8px] bg-base font-body text-[12px] text-ink focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {isDuplicate && (
+        <p className="font-body text-[10px] font-bold text-alert">That month already exists in the list.</p>
+      )}
+
+      <div>
+        <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Amount</label>
+        <input
+          type="number"
+          value={addAmount}
+          onChange={(e) => onAmountChange(e.target.value)}
+          placeholder="0"
+          min={0}
+          className="w-full px-2 py-1.5 border-2 border-ink rounded-[8px] bg-[#fff9e6] font-display font-black text-[16px] text-ink focus:outline-none"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!canSave || saving}
+          className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
+        >
+          Add
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-none px-4 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[11px] font-bold text-muted"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Component ── */
 
 export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalDetailSheetProps) {
   const [goal, setGoal] = useState(initialGoal);
   const [tab, setTab] = useState<Tab>("overview");
+  const [milestones, setMilestones] = useState<GoalMilestone[]>([]);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [loadingTx, setLoadingTx] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
 
   // Edit states
-  const [editing, setEditing] = useState<"name" | "target" | "saved" | "date" | null>(null);
+  const [editing, setEditing] = useState<"name" | "target" | "date" | null>(null);
   const [editName, setEditName] = useState(goal.name);
   const [editTarget, setEditTarget] = useState(String(goal.targetAmount));
-  const [editSaved, setEditSaved] = useState(String(goal.savedAmount));
   const [editDate, setEditDate] = useState(goal.endDate ? new Date(goal.endDate).toISOString().split("T")[0] : "");
 
   // Log expense states
@@ -102,6 +447,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
+    { id: "monthly", label: "Monthly" },
     ...(isTripEvent ? [{ id: "spending" as Tab, label: "Spending" }] : []),
     { id: "transactions", label: "History" },
   ];
@@ -118,6 +464,15 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
       return null;
     }
   }, []);
+
+  const loadMilestones = useCallback(async () => {
+    try {
+      const data = await trpcQuery<{ milestones: GoalMilestone[] }>("goalMilestones.list", { goalId: goal.id });
+      setMilestones(data.milestones);
+    } catch (err) {
+      console.error("Failed to load milestones:", err);
+    }
+  }, [goal.id]);
 
   const loadTransactions = useCallback(async () => {
     let accId = accountId;
@@ -141,13 +496,26 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
 
   useEffect(() => {
     loadAccount();
-  }, [loadAccount]);
+    loadMilestones();
+  }, [loadAccount, loadMilestones]);
 
   useEffect(() => {
     if (tab === "transactions" || tab === "spending") {
       loadTransactions();
     }
   }, [tab, loadTransactions]);
+
+  /* ── Milestone refresh — also re-fetch goal to get updated savedAmount ── */
+  const handleMilestonesChanged = useCallback(async () => {
+    await loadMilestones();
+    try {
+      const data = await trpcQuery<{ goal: Goal }>("goals.get", { id: goal.id });
+      setGoal(data.goal);
+      onUpdated();
+    } catch (err) {
+      console.error(err);
+    }
+  }, [loadMilestones, goal.id, onUpdated]);
 
   /* ── Mutations ── */
 
@@ -157,6 +525,10 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
       setGoal(data.goal);
       setEditing(null);
       onUpdated();
+      // If targetAmount changed, milestones were recalculated server-side — reload them
+      if ("targetAmount" in fields || "endDate" in fields) {
+        loadMilestones();
+      }
     } catch (err) {
       console.error("Failed to update goal:", err);
     }
@@ -194,17 +566,11 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
         excludeFromBudget: true,
       });
 
-      // Update spending plan actuals if trip/event
       if (isTripEvent && logCategory && spendingPlan.length > 0) {
         const updatedPlan = spendingPlan.map((item) =>
-          item.category === logCategory
-            ? { ...item, actual: item.actual + amount }
-            : item,
+          item.category === logCategory ? { ...item, actual: item.actual + amount } : item,
         );
-        await trpcMutate("goals.update", {
-          id: goal.id,
-          spendingPlan: updatedPlan,
-        });
+        await trpcMutate("goals.update", { id: goal.id, spendingPlan: updatedPlan });
         setGoal((prev) => ({ ...prev, spendingPlan: updatedPlan }));
       }
 
@@ -232,11 +598,6 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
       case "target": {
         const val = parseFloat(editTarget) || 0;
         if (val > 0) updateGoal({ targetAmount: val });
-        break;
-      }
-      case "saved": {
-        const val = parseFloat(editSaved) || 0;
-        updateGoal({ savedAmount: val });
         break;
       }
       case "date":
@@ -323,10 +684,11 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
 
         {/* ── Content ── */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[100px]">
+
           {/* ═══ OVERVIEW TAB ═══ */}
           {tab === "overview" && (
             <div className="flex flex-col gap-4 pt-2">
-              {/* Saving progress ring + amounts */}
+              {/* Progress ring + amounts */}
               <div className="flex items-center gap-4 p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md">
                 <div className="relative flex-none">
                   <ProgressRing percent={progress.percentComplete} size={88} />
@@ -337,30 +699,12 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-1.5">
-                  {/* Saved amount — editable */}
-                  {editing === "saved" ? (
-                    <div className="flex flex-col gap-1">
-                      <label className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Saved</label>
-                      <div className="flex gap-1">
-                        <input
-                          type="number"
-                          value={editSaved}
-                          onChange={(e) => setEditSaved(e.target.value)}
-                          className="w-[100px] px-2 py-1 border-2 border-ink rounded-[6px] bg-[#fff9e6] font-display font-black text-[16px] text-ink focus:outline-none"
-                          autoFocus
-                        />
-                        <button type="button" onClick={handleEditSave} className="font-body text-[10px] font-bold text-primary px-1">Save</button>
-                        <button type="button" onClick={() => setEditing(null)} className="font-body text-[10px] font-bold text-muted px-1">X</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setEditing("saved")} className="text-left">
-                      <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Saved</p>
-                      <p className="font-display font-black text-[22px] text-ink leading-tight">
-                        {formatCurrency(goal.savedAmount, "ILS")}
-                      </p>
-                    </button>
-                  )}
+                  <div>
+                    <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Saved</p>
+                    <p className="font-display font-black text-[22px] text-ink leading-tight">
+                      {formatCurrency(goal.savedAmount, "ILS")}
+                    </p>
+                  </div>
 
                   {/* Target amount — editable */}
                   {editing === "target" ? (
@@ -441,10 +785,18 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
             </div>
           )}
 
+          {/* ═══ MONTHLY TAB ═══ */}
+          {tab === "monthly" && (
+            <MonthlyTab
+              goal={goal}
+              milestones={milestones}
+              onMilestonesChanged={handleMilestonesChanged}
+            />
+          )}
+
           {/* ═══ SPENDING TAB (Trip/Event only) ═══ */}
           {tab === "spending" && isTripEvent && (
             <div className="flex flex-col gap-3 pt-2">
-              {/* Total spent vs budget */}
               <div className="p-3.5 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md">
                 <div className="flex items-baseline justify-between mb-2">
                   <p className="font-body text-[10px] font-bold uppercase tracking-[1.5px] text-muted">Trip Spending</p>
@@ -463,7 +815,6 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                 </div>
               </div>
 
-              {/* Category breakdown */}
               {spendingPlan.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   <p className="font-body text-[11px] font-bold uppercase tracking-[2px] text-muted">By Category</p>
@@ -482,14 +833,9 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                           </span>
                         </div>
                         <div className="h-[8px] rounded-[30px] border-[1.5px] border-ink overflow-hidden bg-[#f5f5f0]">
-                          <div
-                            className="h-full rounded-[30px] transition-all duration-300"
-                            style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }}
-                          />
+                          <div className="h-full rounded-[30px] transition-all duration-300" style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }} />
                         </div>
-                        <p className="font-body text-[9px] font-bold mt-0.5" style={{ color: barColor }}>
-                          {Math.round(pct)}%
-                        </p>
+                        <p className="font-body text-[9px] font-bold mt-0.5" style={{ color: barColor }}>{Math.round(pct)}%</p>
                       </div>
                     );
                   })}
@@ -497,9 +843,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
               ) : (
                 <div className="flex flex-col items-center py-6 gap-2">
                   <p className="font-body text-[12px] text-muted text-center">No spending breakdown set up yet.</p>
-                  <p className="font-body text-[10px] text-muted text-center">
-                    Expenses logged to this goal will still appear in History.
-                  </p>
+                  <p className="font-body text-[10px] text-muted text-center">Expenses logged to this goal will still appear in History.</p>
                 </div>
               )}
             </div>
@@ -513,20 +857,14 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
               ) : transactions.length === 0 ? (
                 <div className="flex flex-col items-center py-8 gap-2">
                   <span className="text-[32px]">📝</span>
-                  <p className="font-body text-[12px] text-muted text-center">
-                    No transactions logged for this goal yet.
-                  </p>
-                  <p className="font-body text-[10px] text-muted text-center">
-                    Tap &quot;+ Log Expense&quot; below to record spending.
-                  </p>
+                  <p className="font-body text-[12px] text-muted text-center">No transactions logged for this goal yet.</p>
+                  <p className="font-body text-[10px] text-muted text-center">Tap &quot;+ Log Expense&quot; below to record spending.</p>
                 </div>
               ) : (
                 transactions.map((tx) => (
                   <div key={tx.id} className="flex items-center gap-2.5 p-2.5 border-2 border-ink rounded-[10px] bg-base">
                     <div className="flex-1 min-w-0">
-                      <p className="font-body text-[12px] font-bold text-ink truncate">
-                        {tx.description || tx.category}
-                      </p>
+                      <p className="font-body text-[12px] font-bold text-ink truncate">{tx.description || tx.category}</p>
                       <p className="font-body text-[10px] text-muted">
                         {tx.category} &middot; {new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </p>
@@ -544,39 +882,23 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
         {/* ── Bottom action bar ── */}
         <div className="fixed bottom-0 left-0 right-0 z-[101]">
           <div className="max-w-[480px] mx-auto px-4 pb-5 pt-2 bg-base border-t-2 border-ink/10">
-            {/* Log expense form (expandable) */}
             {logOpen && (
               <div className="mb-3 p-3 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md animate-[slideUp_150ms_ease-out]">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="font-display font-black text-[16px] text-ink uppercase tracking-[0.5px]">
-                    Log Expense
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setLogOpen(false)}
-                    className="font-body text-[12px] font-bold text-muted"
-                  >
-                    Cancel
-                  </button>
+                  <p className="font-display font-black text-[16px] text-ink uppercase tracking-[0.5px]">Log Expense</p>
+                  <button type="button" onClick={() => setLogOpen(false)} className="font-body text-[12px] font-bold text-muted">Cancel</button>
                 </div>
 
-                {/* Category picker for trip goals */}
                 {isTripEvent && spendingPlan.length > 0 && (
                   <div className="mb-2">
-                    <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">
-                      Category
-                    </label>
+                    <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Category</label>
                     <div className="flex flex-wrap gap-1.5">
                       {spendingPlan.map((item) => (
                         <button
                           key={item.category}
                           type="button"
                           onClick={() => setLogCategory(item.category)}
-                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${
-                            logCategory === item.category
-                              ? "bg-primary text-white"
-                              : "bg-base text-ink"
-                          }`}
+                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${logCategory === item.category ? "bg-primary text-white" : "bg-base text-ink"}`}
                         >
                           {item.category}
                         </button>
@@ -585,21 +907,16 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                   </div>
                 )}
 
-                {/* Non-trip: free text category */}
                 {(!isTripEvent || spendingPlan.length === 0) && (
                   <div className="mb-2">
-                    <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">
-                      Category
-                    </label>
+                    <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Category</label>
                     <div className="flex flex-wrap gap-1.5">
                       {TRIP_CATEGORIES.map((c) => (
                         <button
                           key={c}
                           type="button"
                           onClick={() => setLogCategory(c)}
-                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${
-                            logCategory === c ? "bg-primary text-white" : "bg-base text-ink"
-                          }`}
+                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${logCategory === c ? "bg-primary text-white" : "bg-base text-ink"}`}
                         >
                           {c}
                         </button>
@@ -609,9 +926,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                 )}
 
                 <div className="mb-2">
-                  <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">
-                    Description
-                  </label>
+                  <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Description</label>
                   <input
                     type="text"
                     value={logDesc}
@@ -622,9 +937,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                 </div>
 
                 <div className="mb-2">
-                  <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">
-                    Amount
-                  </label>
+                  <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Amount</label>
                   <div className="border-2 border-ink rounded-[10px] py-2 flex flex-col items-center bg-[#fff9e6]">
                     <p className="font-display font-black text-[22px] text-ink">
                       {formatCurrency(parseFloat(logAmount) || 0, "ILS")}
@@ -644,7 +957,6 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
               </div>
             )}
 
-            {/* Main action buttons */}
             {!logOpen && (
               <div className="flex gap-2">
                 <button

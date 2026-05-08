@@ -168,6 +168,7 @@ export const billsRouter = router({
           category: existing.category,
           description: existing.name,
           date: now,
+          billId: input.id,
         },
       });
 
@@ -197,15 +198,9 @@ export const billsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bill has no payment to edit" });
       }
 
-      const oldAmount = existing.lastPaidAmount ?? existing.amount;
       await ctx.prisma.transaction.updateMany({
         where: {
-          accountId: existing.accountId,
-          description: existing.name,
-          date: existing.lastPaidDate,
-          amount: oldAmount,
-          category: existing.category,
-          type: "EXPENSE",
+          billId: input.id,
         },
         data: { amount: input.amount },
       });
@@ -230,12 +225,7 @@ export const billsRouter = router({
 
       await ctx.prisma.transaction.deleteMany({
         where: {
-          accountId: existing.accountId,
-          description: existing.name,
-          date: existing.lastPaidDate,
-          amount: existing.lastPaidAmount ?? existing.amount,
-          category: existing.category,
-          type: "EXPENSE",
+          billId: input.id,
         },
       });
 

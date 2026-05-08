@@ -17,6 +17,27 @@ Personal finance app. Fun, young, modern — not corporate or clinical.
 | Visualization | D3 / SVG (pie chart, bar chart) |
 | AI narrative | Anthropic Claude API (`@anthropic-ai/sdk`) — integrated in API, not yet wired to UI |
 
+## Shell Environment
+
+Node.js is managed by **nvm** and is NOT on the PATH in the Bash tool's non-interactive shell. `pnpm`, `npx`, and `prisma` will all fail with "command not found" unless nvm is sourced first.
+
+**Always prefix Node/pnpm/npx/prisma commands with:**
+```bash
+export NVM_DIR="$HOME/.nvm" && source "$NVM_DIR/nvm.sh" && <command>
+```
+
+For Prisma commands in `services/api`, use `npx prisma` directly (not `pnpm --filter`) and `cd` into the package first:
+```bash
+export NVM_DIR="$HOME/.nvm" && source "$NVM_DIR/nvm.sh" \
+  && cd /Users/jingjingzhao/Projects/JinSight/Jinsight/services/api \
+  && npx prisma <subcommand>
+```
+
+For running dev servers or workspace scripts:
+```bash
+export NVM_DIR="$HOME/.nvm" && source "$NVM_DIR/nvm.sh" && pnpm <command>
+```
+
 ## Design System
 
 See [`DESIGN.md`](./DESIGN.md) for the full Neobrutalism spec. Apply it to every new UI component.

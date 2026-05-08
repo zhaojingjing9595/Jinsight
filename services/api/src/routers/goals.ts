@@ -24,6 +24,64 @@ async function assertGoalAccess(ctx: { userId: string; prisma: any }, goalId: st
   return goal;
 }
 
+/** Generate evenly-split milestones for every month between startDate and endDate (inclusive). */
+function buildMilestones(
+  goalId: string,
+  startDate: Date,
+  endDate: Date,
+  targetAmount: number,
+): { goalId: string; year: number; month: number; amount: number }[] {
+  const milestones: { goalId: string; year: number; month: number; amount: number }[] = [];
+  const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), 1));
+
+  while (cursor <= end) {
+    milestones.push({ goalId, year: cursor.getUTCFullYear(), month: cursor.getUTCMonth() + 1, amount: 0 });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  if (milestones.length > 0) {
+    const perMonth = targetAmount / milestones.length;
+    for (const m of milestones) m.amount = perMonth;
+  }
+
+  return milestones;
+}
+
+/**
+ * Recalculate unachieved milestone amounts after a change.
+ * Achieved rows are locked; remaining budget is split equally among unachieved rows.
+ */
+async function recalcUnachieved(prisma: any, goalId: string, targetAmount: number) {
+  const all = await prisma.goalMilestone.findMany({ where: { goalId } });
+  const achieved = all.filter((m: any) => m.isAchieved);
+  const unachieved = all.filter((m: any) => !m.isAchieved);
+
+  if (unachieved.length === 0) return;
+
+  const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
+  const remaining = Math.max(0, targetAmount - achievedSum);
+  const perMonth = remaining / unachieved.length;
+
+  await prisma.goalMilestone.updateMany({
+    where: { goalId, isAchieved: false },
+    data: { amount: perMonth },
+  });
+}
+
+/** Compute savedAmount from achieved milestones for the API response. */
+async function computeSavedAmount(prisma: any, goalId: string): Promise<number> {
+  const result = await prisma.goalMilestone.aggregate({
+    where: { goalId, isAchieved: true },
+    _sum: { amount: true },
+  });
+  return result._sum.amount ?? 0;
+}
+
+function attachSavedAmount(goal: any, savedAmount: number) {
+  return { ...goal, savedAmount };
+}
+
 export const goalsRouter = router({
   list: protectedProcedure
     .input(z.object({ accountId: z.string().optional() }).optional())
@@ -35,16 +93,32 @@ export const goalsRouter = router({
       const goals = await ctx.prisma.goal.findMany({
         where,
         orderBy: { createdAt: "desc" },
+        include: {
+          milestones: { select: { amount: true, isAchieved: true } },
+        },
       });
 
-      return { goals };
+      const goalsWithSaved = goals.map((g: any) => {
+        const savedAmount = g.milestones
+          .filter((m: any) => m.isAchieved)
+          .reduce((s: number, m: any) => s + m.amount, 0);
+        const { milestones, ...rest } = g;
+        return { ...rest, savedAmount };
+      });
+
+      return { goals: goalsWithSaved };
     }),
 
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const goal = await assertGoalAccess(ctx, input.id);
-      return { goal };
+      await assertGoalAccess(ctx, input.id);
+      const goal = await ctx.prisma.goal.findUnique({
+        where: { id: input.id },
+        include: { milestones: { orderBy: [{ year: "asc" }, { month: "asc" }] } },
+      });
+      const savedAmount = await computeSavedAmount(ctx.prisma, input.id);
+      return { goal: attachSavedAmount(goal, savedAmount) };
     }),
 
   create: protectedProcedure
@@ -55,8 +129,7 @@ export const goalsRouter = router({
         name: z.string().min(1),
         emoji: z.string().default("🎯"),
         targetAmount: z.number().positive(),
-        savedAmount: z.number().min(0).default(0),
-        startDate: z.string().datetime().optional(),
+        startDate: z.string().datetime(),
         endDate: z.string().datetime().optional(),
         status: GoalStatusEnum.default("SAVING"),
         spendingPlan: z.array(SpendingPlanItem).optional(),
@@ -69,18 +142,29 @@ export const goalsRouter = router({
       if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not your account" });
 
       const { accountId, startDate, endDate, spendingPlan, ...rest } = input;
+      const start = new Date(startDate);
+      const end = endDate ? new Date(endDate) : null;
+
       const goal = await ctx.prisma.goal.create({
         data: {
           accountId,
           createdBy: ctx.userId,
           ...rest,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
+          startDate: start,
+          endDate: end,
           spendingPlan: spendingPlan ?? undefined,
         },
       });
 
-      return { goal };
+      // Auto-generate milestones when both dates are set
+      if (end) {
+        const milestones = buildMilestones(goal.id, start, end, input.targetAmount);
+        if (milestones.length > 0) {
+          await ctx.prisma.goalMilestone.createMany({ data: milestones });
+        }
+      }
+
+      return { goal: attachSavedAmount(goal, 0) };
     }),
 
   update: protectedProcedure
@@ -91,7 +175,6 @@ export const goalsRouter = router({
         name: z.string().min(1).optional(),
         emoji: z.string().optional(),
         targetAmount: z.number().positive().optional(),
-        savedAmount: z.number().min(0).optional(),
         startDate: z.string().datetime().nullable().optional(),
         endDate: z.string().datetime().nullable().optional(),
         status: GoalStatusEnum.optional(),
@@ -99,20 +182,57 @@ export const goalsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await assertGoalAccess(ctx, input.id);
+      const existing = await assertGoalAccess(ctx, input.id);
 
       const { id, startDate, endDate, spendingPlan, ...rest } = input;
+
+      const newStartDate = startDate !== undefined
+        ? (startDate ? new Date(startDate) : existing.startDate)
+        : existing.startDate;
+      const newEndDate = endDate !== undefined
+        ? (endDate ? new Date(endDate) : null)
+        : existing.endDate;
+      const newTarget = rest.targetAmount ?? existing.targetAmount;
+
       const goal = await ctx.prisma.goal.update({
         where: { id },
         data: {
           ...rest,
-          ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
-          ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+          startDate: newStartDate,
+          ...(endDate !== undefined && { endDate: newEndDate }),
           ...(spendingPlan !== undefined && { spendingPlan: spendingPlan === null ? Prisma.DbNull : spendingPlan }),
         },
       });
 
-      return { goal };
+      const targetChanged = rest.targetAmount !== undefined && rest.targetAmount !== existing.targetAmount;
+      const endDateChanged = endDate !== undefined && String(newEndDate) !== String(existing.endDate);
+      const startDateChanged = startDate !== undefined && String(newStartDate) !== String(existing.startDate);
+
+      if (endDateChanged || startDateChanged) {
+        // Regenerate all unachieved milestones for the new date range,
+        // preserving achieved ones.
+        const achieved = await ctx.prisma.goalMilestone.findMany({
+          where: { goalId: id, isAchieved: true },
+        });
+        await ctx.prisma.goalMilestone.deleteMany({ where: { goalId: id, isAchieved: false } });
+
+        if (newEndDate) {
+          const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
+          const remaining = Math.max(0, newTarget - achievedSum);
+          const newMilestones = buildMilestones(id, newStartDate, newEndDate, remaining);
+          // Skip months that already have an achieved row
+          const achievedKeys = new Set(achieved.map((m: any) => `${m.year}-${m.month}`));
+          const toInsert = newMilestones.filter((m) => !achievedKeys.has(`${m.year}-${m.month}`));
+          if (toInsert.length > 0) {
+            await ctx.prisma.goalMilestone.createMany({ data: toInsert, skipDuplicates: true });
+          }
+        }
+      } else if (targetChanged) {
+        await recalcUnachieved(ctx.prisma, id, newTarget);
+      }
+
+      const savedAmount = await computeSavedAmount(ctx.prisma, id);
+      return { goal: attachSavedAmount(goal, savedAmount) };
     }),
 
   delete: protectedProcedure
@@ -131,6 +251,7 @@ export const goalsRouter = router({
         where: { id: input.id },
         data: { status: input.status },
       });
-      return { goal };
+      const savedAmount = await computeSavedAmount(ctx.prisma, input.id);
+      return { goal: attachSavedAmount(goal, savedAmount) };
     }),
 });

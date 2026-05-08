@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { formatCurrency, CATEGORY_META } from "@jinsight/core";
-import type { Category } from "@jinsight/core";
+import { useState, useEffect } from "react";
+import { formatCurrency, CATEGORY_META, slugifyCustomCategory } from "@jinsight/core";
+import type { Category, CustomCategoryMeta } from "@jinsight/core";
 import type { BudgetPlanType, CategoryAllocation } from "@jinsight/core";
 import { NumPad } from "@/components/NumPad";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { CategoryPicker } from "@/components/CategoryPicker";
+import { trpcQuery } from "@/lib/api";
 
 const PLAN_TYPES: {
   value: BudgetPlanType;
@@ -79,14 +81,43 @@ export function BudgetPlanForm() {
   const [allocations, setAllocations] = useState<CategoryAllocation[]>([]);
   const [notes, setNotes]         = useState("");
   const [saved, setSaved]         = useState(false);
+  const [customCategories, setCustomCategories] = useState<CustomCategoryMeta[]>([]);
+  const [pickingCategoryFor, setPickingCategoryFor] = useState<number | null>(null);
+
+  async function loadCustomCategories() {
+    try {
+      const res = await trpcQuery<{ categories: { id: string; name: string; color: string }[] }>(
+        "categories.list",
+        {},
+      );
+      setCustomCategories(
+        res.categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          slug: slugifyCustomCategory(c.name),
+        })),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    loadCustomCategories();
+
+    const onCategoryAdded = () => loadCustomCategories();
+    window.addEventListener("jinsight:category-added", onCategoryAdded);
+    return () => window.removeEventListener("jinsight:category-added", onCategoryAdded);
+  }, []);
 
   const totalNum   = parseFloat(totalAmount) || 0;
   const allocated  = allocations.reduce((s, a) => s + a.limit, 0);
   const remaining  = totalNum - allocated;
 
   function addAllocation() {
-    const unused = EXPENSE_CATS.find((c) => !allocations.find((a) => a.category === c));
-    if (unused) setAllocations([...allocations, { category: unused, limit: 0 }]);
+    setAllocations([...allocations, { category: "", limit: 0 }]);
+    setPickingCategoryFor(allocations.length);
   }
 
   function updateAllocation(index: number, field: "category" | "limit", value: string | number) {
@@ -99,6 +130,11 @@ export function BudgetPlanForm() {
 
   function removeAllocation(index: number) {
     setAllocations(allocations.filter((_, i) => i !== index));
+  }
+
+  function selectCategoryForAllocation(index: number, category: string) {
+    updateAllocation(index, "category", category);
+    setPickingCategoryFor(null);
   }
 
   function handleSave() {
@@ -264,8 +300,7 @@ export function BudgetPlanForm() {
           <button
             type="button"
             onClick={addAllocation}
-            disabled={allocations.length >= EXPENSE_CATS.length}
-            className="font-body text-[11px] font-bold text-primary uppercase tracking-[1px] disabled:opacity-40"
+            className="font-body text-[11px] font-bold text-primary uppercase tracking-[1px]"
           >
             + Add category
           </button>
@@ -274,47 +309,53 @@ export function BudgetPlanForm() {
         {allocations.length > 0 && (
           <div className="flex flex-col gap-2">
             {allocations.map((alloc, i) => {
-              const meta = CATEGORY_META[alloc.category];
-              const unusedCats = EXPENSE_CATS.filter(
-                (c) => c === alloc.category || !allocations.find((a) => a.category === c),
-              );
+              const meta = alloc.category ? (CATEGORY_META[alloc.category] || customCategories.find((c) => c.slug === alloc.category)) : null;
+              const isPickingCategory = pickingCategoryFor === i;
               return (
                 <div
                   key={i}
-                  className="flex items-center gap-2 p-2 border-2 border-ink rounded-[10px] bg-base shadow-neo-xs"
+                  className="flex flex-col gap-2 p-2 border-2 border-ink rounded-[10px] bg-base shadow-neo-xs"
                 >
-                  <div
-                    className="w-9 h-9 flex items-center justify-center border-[1.5px] border-ink rounded-icon flex-none"
-                    style={{ backgroundColor: meta.color }}
-                  >
-                    <CategoryIcon category={alloc.category} size={20} />
+                  <div className="flex items-center gap-2">
+                    {alloc.category && meta && (
+                      <div
+                        className="w-9 h-9 flex items-center justify-center border-[1.5px] border-ink rounded-icon flex-none"
+                        style={{ backgroundColor: meta.color }}
+                      >
+                        <CategoryIcon category={alloc.category} size={20} />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPickingCategoryFor(i)}
+                      className={`font-body flex-1 text-left text-[12px] font-bold ${alloc.category ? "text-ink" : "text-muted"}`}
+                    >
+                      {alloc.category ? (meta?.label || meta?.name) : "Select category"}
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={alloc.limit || ""}
+                      onChange={(e) => updateAllocation(i, "limit", parseFloat(e.target.value) || 0)}
+                      placeholder="0"
+                      className="font-body w-[80px] px-2 py-1 text-[13px] font-bold text-right border-[1.5px] border-ink rounded-[6px] bg-base focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeAllocation(i)}
+                      className="text-alert font-bold text-[16px] flex-none"
+                    >
+                      ×
+                    </button>
                   </div>
-                  <select
-                    value={alloc.category}
-                    onChange={(e) => updateAllocation(i, "category", e.target.value)}
-                    className="font-body flex-1 bg-transparent border-none text-[12px] font-bold text-ink focus:outline-none"
-                  >
-                    {unusedCats.map((c) => (
-                      <option key={c} value={c}>
-                        {CATEGORY_META[c].label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="0"
-                    value={alloc.limit || ""}
-                    onChange={(e) => updateAllocation(i, "limit", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="font-body w-[80px] px-2 py-1 text-[13px] font-bold text-right border-[1.5px] border-ink rounded-[6px] bg-base focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeAllocation(i)}
-                    className="text-alert font-bold text-[16px] flex-none"
-                  >
-                    ×
-                  </button>
+                  {isPickingCategory && (
+                    <CategoryPicker
+                      value={alloc.category}
+                      onChange={(cat) => selectCategoryForAllocation(i, cat)}
+                      mode="expense"
+                      customCategories={customCategories}
+                    />
+                  )}
                 </div>
               );
             })}

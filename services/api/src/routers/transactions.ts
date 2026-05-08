@@ -30,7 +30,7 @@ export const transactionsRouter = router({
         type: z.enum(["INCOME", "EXPENSE"]).optional(),
         budgetPlanId: z.string().optional(),
         goalId: z.string().optional(),
-        limit: z.number().int().min(1).max(100).default(50),
+        limit: z.number().int().min(1).max(500).default(50),
         offset: z.number().int().min(0).default(0),
       }),
     )
@@ -182,19 +182,8 @@ export const transactionsRouter = router({
 
       const balanceDelta = existing.type === "INCOME" ? -existing.amount : existing.amount;
 
-      // Check if this transaction matches a bill payment (by name, date, amount, category)
-      const matchingBill = existing.type === "EXPENSE" && existing.description
-        ? await ctx.prisma.bill.findFirst({
-            where: {
-              accountId: existing.accountId,
-              name: existing.description,
-              category: existing.category,
-              lastPaidDate: {
-                gte: new Date(existing.date.getTime() - 1000),
-                lte: new Date(existing.date.getTime() + 1000),
-              },
-            },
-          })
+      const bill = existing.billId
+        ? await ctx.prisma.bill.findUnique({ where: { id: existing.billId } })
         : null;
 
       const ops = [
@@ -203,20 +192,20 @@ export const transactionsRouter = router({
           where: { id: existing.accountId },
           data: { balance: { increment: balanceDelta } },
         }),
-        ...(matchingBill
+        ...(bill
           ? [
-              matchingBill.isRecurring
+              bill.isRecurring
                 ? ctx.prisma.bill.update({
-                    where: { id: matchingBill.id },
+                    where: { id: bill.id },
                     data: {
                       lastPaidDate: null,
                       lastPaidAmount: null,
-                      dueDate: rollBackward(matchingBill.dueDate, matchingBill.recurrence as "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"),
+                      dueDate: rollBackward(bill.dueDate, bill.recurrence as "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"),
                       isPaid: false,
                     },
                   })
                 : ctx.prisma.bill.update({
-                    where: { id: matchingBill.id },
+                    where: { id: bill.id },
                     data: { isPaid: false, lastPaidDate: null, lastPaidAmount: null },
                   }),
             ]
