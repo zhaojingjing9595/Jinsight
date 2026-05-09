@@ -8,7 +8,7 @@ import {
   computeGoalProgress,
   getGoalHealthStatus,
 } from "@jinsight/core";
-import type { Goal, GoalStatus, GoalMilestone, SpendingPlanItem } from "@jinsight/core";
+import type { Goal, GoalMilestone, SpendingPlanItem } from "@jinsight/core";
 import { trpcQuery, trpcMutate } from "@/lib/api";
 import { GoalStatusChip } from "./GoalStatusChip";
 import { NumPad } from "@/components/NumPad";
@@ -30,7 +30,7 @@ type GoalDetailSheetProps = {
   onUpdated: () => void;
 };
 
-type Tab = "overview" | "monthly" | "spending" | "transactions";
+type Tab = "overview" | "spending" | "transactions";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -70,39 +70,57 @@ function MonthlyTab({
   goal,
   milestones,
   onMilestonesChanged,
+  addOpen,
+  setAddOpen,
+  onDebtAchieved,
+  resetLoading,
 }: {
   goal: Goal;
   milestones: GoalMilestone[];
   onMilestonesChanged: () => void;
+  addOpen: boolean;
+  setAddOpen: (v: boolean) => void;
+  onDebtAchieved?: (milestoneId: string, amount: number, year: number, month: number) => void;
+  resetLoading?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
   const [addYear, setAddYear] = useState(new Date().getFullYear());
   const [addMonth, setAddMonth] = useState(new Date().getMonth() + 1);
   const [addAmount, setAddAmount] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [addSaving, setAddSaving] = useState(false);
 
   const existingKeys = new Set(milestones.map((m) => `${m.year}-${m.month}`));
 
   async function handleMarkAchieved(id: string, isAchieved: boolean) {
-    setSaving(true);
+    // For debt goals, show confirmation popup instead of immediately marking
+    if (!isAchieved && goal.type === "DEBT") {
+      const milestone = milestones.find((m) => m.id === id);
+      if (milestone && onDebtAchieved) {
+        onDebtAchieved(id, milestone.amount, milestone.year, milestone.month);
+        return;
+      }
+    }
+
+    // For all other cases, mark immediately
+    setLoadingId(id);
     try {
       const proc = isAchieved ? "goalMilestones.unmarkAchieved" : "goalMilestones.markAchieved";
       await trpcMutate(proc, { id });
-      onMilestonesChanged();
+      await onMilestonesChanged();
     } catch (err) {
       console.error(err);
     } finally {
-      setSaving(false);
+      setLoadingId(null);
     }
   }
 
   async function handleSaveAmount(id: string) {
     const val = parseFloat(editAmount);
     if (isNaN(val) || val < 0) return;
-    setSaving(true);
+    setLoadingId(id);
     try {
       await trpcMutate("goalMilestones.updateAmount", { id, amount: val });
       setEditingId(null);
@@ -110,12 +128,12 @@ function MonthlyTab({
     } catch (err) {
       console.error(err);
     } finally {
-      setSaving(false);
+      setLoadingId(null);
     }
   }
 
   async function handleDelete(id: string) {
-    setSaving(true);
+    setLoadingId(id);
     try {
       await trpcMutate("goalMilestones.delete", { id });
       setMenuOpenId(null);
@@ -123,14 +141,14 @@ function MonthlyTab({
     } catch (err) {
       console.error(err);
     } finally {
-      setSaving(false);
+      setLoadingId(null);
     }
   }
 
   async function handleAddMilestone() {
     const val = parseFloat(addAmount);
     if (isNaN(val) || val < 0) return;
-    setSaving(true);
+    setAddSaving(true);
     try {
       await trpcMutate("goalMilestones.create", {
         goalId: goal.id,
@@ -144,179 +162,200 @@ function MonthlyTab({
     } catch (err) {
       console.error(err);
     } finally {
-      setSaving(false);
+      setAddSaving(false);
     }
   }
 
-  if (milestones.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-10 gap-3">
-        <span className="text-[32px]">📅</span>
-        <p className="font-body text-[13px] font-bold text-muted text-center">
-          No monthly breakdown yet.
-        </p>
-        <p className="font-body text-[11px] text-muted text-center">
-          Set a start and end date to auto-generate your monthly plan.
-        </p>
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="mt-2 px-4 py-2 border-[2px] border-ink rounded-[10px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-        >
-          + Add a Month
-        </button>
-        {addOpen && (
-          <AddMonthForm
-            existingKeys={existingKeys}
-            addYear={addYear}
-            addMonth={addMonth}
-            addAmount={addAmount}
-            saving={saving}
-            onYearChange={setAddYear}
-            onMonthChange={setAddMonth}
-            onAmountChange={setAddAmount}
-            onSave={handleAddMilestone}
-            onCancel={() => setAddOpen(false)}
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2 pt-2">
-      {/* Add button */}
+  const milestoneModal = addOpen && (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
       <button
         type="button"
-        onClick={() => setAddOpen((v) => !v)}
-        className="self-start px-3 py-1.5 border-[1.5px] border-dashed border-primary/60 rounded-[20px] font-body text-[10px] font-black uppercase tracking-[1px] text-primary active:bg-primary/5"
-      >
-        + Add an Achievement
-      </button>
-
-      {addOpen && (
+        aria-label="Close"
+        onClick={() => setAddOpen(false)}
+        className="absolute inset-0 bg-ink/40 cursor-default"
+      />
+      <div className="relative z-10 w-full max-w-[340px]">
         <AddMonthForm
           existingKeys={existingKeys}
           addYear={addYear}
           addMonth={addMonth}
           addAmount={addAmount}
-          saving={saving}
+          saving={addSaving}
           onYearChange={setAddYear}
           onMonthChange={setAddMonth}
           onAmountChange={setAddAmount}
           onSave={handleAddMilestone}
           onCancel={() => setAddOpen(false)}
         />
-      )}
-
-      {/* Milestone rows */}
-      {milestones.map((m) => (
-        <div
-          key={m.id}
-          className={`relative flex items-center gap-3 p-3 border-2 border-ink rounded-[12px] transition-colors ${
-            m.isAchieved ? "bg-[#2ad2a3]/10" : "bg-base"
-          }`}
-        >
-          {/* Month label */}
-          <div className="flex-none w-[52px] text-center">
-            <p className="font-display font-black text-[15px] text-ink leading-tight">
-              {MONTH_NAMES[m.month - 1]}
-            </p>
-            <p className="font-body text-[9px] font-bold text-muted">{m.year}</p>
-          </div>
-
-          {/* Amount or edit field */}
-          <div className="flex-1 min-w-0">
-            {editingId === m.id ? (
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  className="w-[100px] px-2 py-1 border-2 border-ink rounded-[6px] bg-[#fff9e6] font-display font-black text-[15px] text-ink focus:outline-none"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSaveAmount(m.id)}
-                  disabled={saving}
-                  className="font-body text-[10px] font-bold text-primary px-1"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingId(null)}
-                  className="font-body text-[10px] font-bold text-muted px-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <p className={`font-display font-black text-[17px] ${m.isAchieved ? "text-income" : "text-ink"}`}>
-                {formatCurrency(m.amount, "ILS")}
-              </p>
-            )}
-            {m.isAchieved && m.achievedAt && (
-              <p className="font-body text-[9px] text-income font-bold">
-                Achieved {new Date(m.achievedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </p>
-            )}
-          </div>
-
-          {/* Mark achieved button */}
-          <button
-            type="button"
-            onClick={() => handleMarkAchieved(m.id, m.isAchieved)}
-            disabled={saving}
-            className={`flex-none w-[28px] h-[28px] flex items-center justify-center border-[2px] border-ink rounded-full font-bold text-[13px] transition-all active:scale-95 disabled:opacity-40 ${
-              m.isAchieved
-                ? "bg-income text-white"
-                : "bg-base text-muted"
-            }`}
-            title={m.isAchieved ? "Unmark" : "Mark achieved"}
-          >
-            ✓
-          </button>
-
-          {/* 3-dot menu */}
-          {!m.isAchieved && (
-            <div className="relative flex-none">
-              <button
-                type="button"
-                onClick={() => setMenuOpenId(menuOpenId === m.id ? null : m.id)}
-                className="w-[28px] h-[28px] flex items-center justify-center border-[1.5px] border-ink rounded-full font-bold text-[11px] text-muted bg-base active:bg-[#f0f0ea]"
-              >
-                ···
-              </button>
-              {menuOpenId === m.id && (
-                <div className="absolute right-0 top-[32px] z-10 w-[120px] border-2 border-ink rounded-[10px] bg-base shadow-neo-sm overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(m.id);
-                      setEditAmount(String(m.amount));
-                      setMenuOpenId(null);
-                    }}
-                    className="w-full text-left px-3 py-2 font-body text-[11px] font-bold text-ink hover:bg-[#f5f5f0]"
-                  >
-                    Edit amount
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(m.id)}
-                    disabled={saving}
-                    className="w-full text-left px-3 py-2 font-body text-[11px] font-bold text-alert hover:bg-alert/5 disabled:opacity-40"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+      </div>
     </div>
+  );
+
+  if (milestones.length === 0) {
+    return (
+      <>
+        <div className="flex flex-col items-center py-10 gap-3">
+          <span className="text-[32px]">📅</span>
+          <p className="font-body text-[13px] font-bold text-muted text-center">
+            No monthly breakdown yet.
+          </p>
+          <p className="font-body text-[11px] text-muted text-center">
+            Set a start and end date to auto-generate your monthly plan, or tap the button above.
+          </p>
+        </div>
+        {milestoneModal}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="h-full flex flex-col relative">
+      {/* Scrollable milestone list */}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 relative" style={{ scrollbarWidth: "none" }}>
+        {milestones.map((m) => (
+            <div
+              key={m.id}
+              className={`relative flex items-center gap-3 px-3 py-1 border-2 border-dashed rounded-[10px] transition-colors ${
+                m.isAchieved ? "border-income/60 bg-income/5" : "border-ink/60 bg-base"
+              }`}
+            >
+              {/* Month label */}
+              <div className="flex-none w-[44px] text-center">
+                <p className="font-display font-black text-[14px] text-ink leading-tight">
+                  {MONTH_NAMES[m.month - 1]}
+                </p>
+                <p className="font-body text-[9px] font-bold text-muted">{m.year}</p>
+              </div>
+
+              {/* Amount or edit field */}
+              <div className="flex-1 min-w-0">
+                {editingId === m.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="w-[90px] px-2 py-1 border-2 border-ink rounded-[6px] bg-[#fff9e6] font-display font-black text-[14px] text-ink focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveAmount(m.id)}
+                      disabled={loadingId === m.id}
+                      className="flex-none px-2.5 py-1 border-[2px] border-ink rounded-[8px] font-body text-[10px] font-black uppercase tracking-[0.5px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                    >
+                      {loadingId === m.id ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="flex-none px-2.5 py-1 border-[2px] border-ink rounded-[8px] font-body text-[10px] font-bold uppercase tracking-[0.5px] bg-base text-ink shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <p className={`font-display font-black text-[16px] ${m.isAchieved ? "text-income" : "text-ink"}`}>
+                    {formatCurrency(m.amount, "ILS")}
+                  </p>
+                )}
+                {m.isAchieved && m.achievedAt && (
+                  <p className="font-body text-[9px] text-income font-bold">
+                    ✓ {new Date(m.achievedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                )}
+              </div>
+
+              {/* Mark achieved button — shows spinner while loading */}
+              {loadingId === m.id ? (
+                <div className="flex-none w-[26px] h-[26px] flex items-center justify-center">
+                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="6" stroke="#e5e5e0" strokeWidth="2.5" />
+                    <path d="M8 2 A6 6 0 0 1 14 8" stroke="#111008" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleMarkAchieved(m.id, m.isAchieved)}
+                  disabled={loadingId !== null}
+                  className={`flex-none w-[26px] h-[26px] flex items-center justify-center border-[2px] border-ink rounded-full font-bold text-[12px] transition-all active:scale-95 disabled:opacity-40 cursor-pointer ${
+                    m.isAchieved ? "bg-income text-white" : "bg-base text-muted"
+                  }`}
+                  title={m.isAchieved ? "Unmark" : "Mark achieved"}
+                >
+                  ✓
+                </button>
+              )}
+
+              {/* 3-dot menu — always visible */}
+              <div className="relative flex-none">
+                <button
+                  type="button"
+                  aria-label="Actions"
+                  onClick={() => setMenuOpenId(menuOpenId === m.id ? null : m.id)}
+                  disabled={loadingId === m.id}
+                  className="w-6 h-6 flex items-center justify-center rounded-[6px] hover:bg-ink/5 active:scale-95 cursor-pointer disabled:opacity-30"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="#111008">
+                    <circle cx="5" cy="12" r="1.8" />
+                    <circle cx="12" cy="12" r="1.8" />
+                    <circle cx="19" cy="12" r="1.8" />
+                  </svg>
+                </button>
+                {menuOpenId === m.id && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      onClick={() => setMenuOpenId(null)}
+                      className="fixed inset-0 z-20 cursor-default"
+                    />
+                    <div className="absolute right-0 top-7 z-30 min-w-[130px] border-2 border-ink rounded-[10px] bg-base shadow-neo-sm overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(m.id);
+                          setEditAmount(String(m.amount));
+                          setMenuOpenId(null);
+                        }}
+                        className="w-full text-left px-3 py-2 font-body text-[12px] font-[600] text-ink hover:bg-[#f5f5f0] cursor-pointer"
+                      >
+                        Edit amount
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(m.id)}
+                        disabled={loadingId === m.id}
+                        className="w-full text-left px-3 py-2 font-body text-[12px] font-[600] text-alert hover:bg-alert/5 disabled:opacity-40 cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {/* Reset loading overlay */}
+      {resetLoading && (
+        <div className="absolute inset-0 bg-base/80 backdrop-blur-xs flex items-center justify-center rounded-[10px]">
+          <div className="flex flex-col items-center gap-2">
+            <svg className="animate-spin" width="24" height="24" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="#e5e5e0" strokeWidth="2.5" />
+              <path d="M8 2 A6 6 0 0 1 14 8" stroke="#111008" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+            <p className="font-body text-[11px] font-bold text-muted">Resetting…</p>
+          </div>
+        </div>
+      )}
+      </div>
+
+      {milestoneModal}
+    </>
   );
 }
 
@@ -348,7 +387,7 @@ function AddMonthForm({
   const canSave = !isDuplicate && !isNaN(val) && val >= 0;
 
   return (
-    <div className="p-3 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-sm flex flex-col gap-3">
+    <div className="p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-lg flex flex-col gap-3">
       <p className="font-display font-black text-[14px] text-ink uppercase tracking-[0.5px]">Add a Month</p>
 
       <div className="flex gap-2">
@@ -398,18 +437,75 @@ function AddMonthForm({
           type="button"
           onClick={onSave}
           disabled={!canSave || saving}
-          className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
+          className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
         >
           Add
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="flex-none px-4 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[11px] font-bold text-muted"
+          className="flex-none px-4 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[11px] font-bold text-muted cursor-pointer"
         >
           Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ── Horizontal progress bar with timeline ── */
+
+function buildTimelineLabels(startDate: string | null, endDate: string | null) {
+  const labels: { label: string; pct: number }[] = [{ label: "NOW", pct: 0 }];
+  if (!endDate) return labels;
+  const start = startDate ? new Date(startDate) : new Date();
+  const end = new Date(endDate);
+  const totalMs = end.getTime() - start.getTime();
+  if (totalMs <= 0) return labels;
+  for (const frac of [0.33, 0.55, 0.77]) {
+    const d = new Date(start.getTime() + frac * totalMs);
+    labels.push({ label: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(), pct: frac * 100 });
+  }
+  labels.push({ label: String(end.getFullYear()), pct: 100 });
+  return labels;
+}
+
+function HorizontalProgress({ percent, startDate, endDate }: { percent: number; startDate: string | null; endDate: string | null }) {
+  const p = Math.min(Math.max(percent, 0), 100);
+  const labels = buildTimelineLabels(startDate, endDate);
+  const circleLeft = p < 4 ? "0%" : p > 96 ? "100%" : `${p}%`;
+  const circleTranslate = p < 4 ? "translateX(0)" : p > 96 ? "translateX(-100%)" : "translateX(-50%)";
+  const barColor = p >= 100 ? "#2ad2a3" : "#a57dee";
+
+  return (
+    <div className="mt-3">
+      <div className="relative h-[40px] flex items-center">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[12px] rounded-full border-2 border-ink overflow-hidden bg-[#e5e5e0]">
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${p}%`, backgroundColor: barColor }} />
+        </div>
+        <div
+          className="absolute z-10 w-[40px] h-[40px] rounded-full border-[2.5px] border-ink bg-base shadow-neo-xs flex items-center justify-center"
+          style={{ left: circleLeft, transform: circleTranslate }}
+        >
+          <span className="font-display font-black text-[11px] text-ink">{Math.round(p)}%</span>
+        </div>
+      </div>
+      {labels.length > 1 && (
+        <div className="relative h-[18px] mt-0.5">
+          {labels.map((item) => (
+            <span
+              key={item.pct}
+              className="absolute font-body text-[9px] font-bold uppercase tracking-[1px] text-muted whitespace-nowrap"
+              style={{
+                left: `${item.pct}%`,
+                transform: item.pct === 0 ? "translateX(0)" : item.pct === 100 ? "translateX(-100%)" : "translateX(-50%)",
+              }}
+            >
+              {item.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -423,9 +519,11 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [loadingTx, setLoadingTx] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [addMilestoneOpen, setAddMilestoneOpen] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
-  // Edit states
-  const [editing, setEditing] = useState<"name" | "target" | "date" | null>(null);
+  // Edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editName, setEditName] = useState(goal.name);
   const [editTarget, setEditTarget] = useState(String(goal.targetAmount));
   const [editDate, setEditDate] = useState(goal.endDate ? new Date(goal.endDate).toISOString().split("T")[0] : "");
@@ -435,10 +533,13 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
   const [logAmount, setLogAmount] = useState("0");
   const [logCategory, setLogCategory] = useState("");
   const [logDesc, setLogDesc] = useState("");
+  const [logYear, setLogYear] = useState(new Date().getFullYear());
+  const [logMonth, setLogMonth] = useState(new Date().getMonth() + 1);
   const [logSaving, setLogSaving] = useState(false);
 
-  // Confirm delete
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Transaction confirmation popups
+  const [pendingDebtTransaction, setPendingDebtTransaction] = useState<{ id: string; amount: number; year: number; month: number } | null>(null);
+  const [pendingExpenseTransaction, setPendingExpenseTransaction] = useState<{ amount: number; category: string; desc: string; year?: number; month?: number } | null>(null);
 
   const isTripEvent = goal.type === "TRIP_EVENT";
   const progress = computeGoalProgress(goal);
@@ -447,7 +548,6 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
-    { id: "monthly", label: "Monthly" },
     ...(isTripEvent ? [{ id: "spending" as Tab, label: "Spending" }] : []),
     { id: "transactions", label: "History" },
   ];
@@ -523,7 +623,6 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
     try {
       const data = await trpcMutate<{ goal: Goal }>("goals.update", { id: goal.id, ...fields });
       setGoal(data.goal);
-      setEditing(null);
       onUpdated();
       // If targetAmount changed, milestones were recalculated server-side — reload them
       if ("targetAmount" in fields || "endDate" in fields) {
@@ -534,18 +633,89 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
     }
   }
 
-  async function deleteGoal() {
+  async function handleResetUnachieved() {
+    setResetLoading(true);
     try {
-      await trpcMutate("goals.delete", { id: goal.id });
-      onUpdated();
-      onClose();
+      await trpcMutate<{ milestones: GoalMilestone[] }>("goalMilestones.resetUnachieved", {
+        goalId: goal.id,
+      });
+      await handleMilestonesChanged();
     } catch (err) {
-      console.error("Failed to delete goal:", err);
+      console.error("Failed to reset milestones:", err);
+    } finally {
+      setResetLoading(false);
     }
   }
 
-  async function markComplete() {
-    await updateGoal({ status: "COMPLETE" as GoalStatus });
+  async function handleDebtAchieved(milestoneId: string, amount: number, year: number, month: number) {
+    setPendingDebtTransaction({ id: milestoneId, amount, year, month });
+  }
+
+  async function confirmAddDebtTransaction(add: boolean) {
+    if (!pendingDebtTransaction) {
+      setPendingDebtTransaction(null);
+      return;
+    }
+
+    try {
+      // First mark the milestone as achieved
+      await trpcMutate("goalMilestones.markAchieved", { id: pendingDebtTransaction.id });
+
+      // Then create transaction if user wants
+      if (add && accountId) {
+        // Create date from milestone's year and month (end of month)
+        const txDate = new Date(pendingDebtTransaction.year, pendingDebtTransaction.month, 1);
+
+        await trpcMutate("transactions.create", {
+          accountId,
+          amount: pendingDebtTransaction.amount,
+          type: "EXPENSE",
+          category: "debt_payment",
+          description: `${goal.name} - Debt Payoff`,
+          date: txDate.toISOString(),
+          goalId: goal.id,
+          milestoneId: pendingDebtTransaction.id,
+          excludeFromBudget: true,
+        });
+        window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
+      }
+
+      await handleMilestonesChanged();
+    } catch (err) {
+      console.error("Failed to confirm debt transaction:", err);
+    } finally {
+      setPendingDebtTransaction(null);
+    }
+  }
+
+  async function confirmAddExpenseTransaction(add: boolean) {
+    if (!add || !pendingExpenseTransaction) {
+      setPendingExpenseTransaction(null);
+      return;
+    }
+
+    if (!accountId) {
+      setPendingExpenseTransaction(null);
+      return;
+    }
+
+    try {
+      await trpcMutate("transactions.create", {
+        accountId,
+        amount: pendingExpenseTransaction.amount,
+        type: "EXPENSE",
+        category: pendingExpenseTransaction.category || "other",
+        description: pendingExpenseTransaction.desc || undefined,
+        date: new Date().toISOString(),
+        goalId: goal.id,
+        excludeFromBudget: true,
+      });
+      window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
+    } catch (err) {
+      console.error("Failed to add expense transaction:", err);
+    } finally {
+      setPendingExpenseTransaction(null);
+    }
   }
 
   async function logExpense() {
@@ -553,57 +723,92 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
     const amount = parseFloat(logAmount) || 0;
     if (amount <= 0) return;
 
-    setLogSaving(true);
-    try {
-      await trpcMutate("transactions.create", {
-        accountId,
-        amount,
-        type: "EXPENSE",
-        category: logCategory || "other",
-        description: logDesc || undefined,
-        date: new Date().toISOString(),
-        goalId: goal.id,
-        excludeFromBudget: true,
-      });
-
-      if (isTripEvent && logCategory && spendingPlan.length > 0) {
+    // Update spending plan if trip event
+    if (isTripEvent && logCategory && spendingPlan.length > 0) {
+      setLogSaving(true);
+      try {
         const updatedPlan = spendingPlan.map((item) =>
           item.category === logCategory ? { ...item, actual: item.actual + amount } : item,
         );
         await trpcMutate("goals.update", { id: goal.id, spendingPlan: updatedPlan });
         setGoal((prev) => ({ ...prev, spendingPlan: updatedPlan }));
+      } catch (err) {
+        console.error("Failed to update spending plan:", err);
+        setLogSaving(false);
+        return;
+      }
+      setLogSaving(false);
+    }
+
+    // Show confirmation to add to transactions
+    setPendingExpenseTransaction({
+      amount,
+      category: logCategory || "other",
+      desc: logDesc,
+      year: logYear,
+      month: logMonth,
+    });
+  }
+
+  async function finalizeExpenseLog(addToTransactions: boolean) {
+    if (!pendingExpenseTransaction || !accountId) {
+      setPendingExpenseTransaction(null);
+      return;
+    }
+
+    setLogSaving(true);
+    try {
+      if (addToTransactions) {
+        // Create date from selected year and month (end of month)
+        const txDate = new Date(pendingExpenseTransaction.year || logYear, (pendingExpenseTransaction.month || logMonth), 1);
+
+        await trpcMutate("transactions.create", {
+          accountId,
+          amount: pendingExpenseTransaction.amount,
+          type: "EXPENSE",
+          category: pendingExpenseTransaction.category,
+          description: pendingExpenseTransaction.desc || undefined,
+          date: txDate.toISOString(),
+          goalId: goal.id,
+          excludeFromBudget: true,
+        });
+        window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
+        loadTransactions();
       }
 
-      window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
       setLogOpen(false);
       setLogAmount("0");
       setLogCategory("");
       setLogDesc("");
-      loadTransactions();
+      setLogYear(new Date().getFullYear());
+      setLogMonth(new Date().getMonth() + 1);
       onUpdated();
     } catch (err) {
-      console.error("Failed to log expense:", err);
+      console.error("Failed to finalize expense:", err);
     } finally {
       setLogSaving(false);
+      setPendingExpenseTransaction(null);
     }
   }
 
-  /* ── Inline edit helpers ── */
+  /* ── Edit modal helpers ── */
 
-  function handleEditSave() {
-    switch (editing) {
-      case "name":
-        if (editName.trim()) updateGoal({ name: editName.trim() });
-        break;
-      case "target": {
-        const val = parseFloat(editTarget) || 0;
-        if (val > 0) updateGoal({ targetAmount: val });
-        break;
-      }
-      case "date":
-        updateGoal({ endDate: editDate ? new Date(editDate).toISOString() : null });
-        break;
-    }
+  function openEditModal() {
+    setEditName(goal.name);
+    setEditTarget(String(goal.targetAmount));
+    setEditDate(goal.endDate ? new Date(goal.endDate).toISOString().split("T")[0] : "");
+    setEditModalOpen(true);
+  }
+
+  async function handleEditModalSave() {
+    const fields: Record<string, unknown> = {};
+    if (editName.trim() && editName.trim() !== goal.name) fields.name = editName.trim();
+    const targetVal = parseFloat(editTarget);
+    if (!isNaN(targetVal) && targetVal > 0 && targetVal !== goal.targetAmount) fields.targetAmount = targetVal;
+    const currentEndDateStr = goal.endDate ? new Date(goal.endDate).toISOString().split("T")[0] : "";
+    if (editDate !== currentEndDateStr) fields.endDate = editDate ? new Date(editDate).toISOString() : null;
+    if (Object.keys(fields).length > 0) await updateGoal(fields);
+    setEditModalOpen(false);
   }
 
   /* ── Computed spending totals ── */
@@ -627,29 +832,13 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 flex items-center justify-center border-2 border-ink rounded-full bg-base shadow-neo-xs font-body font-bold text-[14px] text-ink active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+              className="w-9 h-9 flex items-center justify-center border-2 border-ink rounded-full bg-base shadow-neo-xs font-body font-bold text-[14px] text-ink active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
             >
               ←
             </button>
             <div className="flex-1 min-w-0 flex items-center gap-2">
               <span className="text-[24px]">{goal.emoji}</span>
-              {editing === "name" ? (
-                <div className="flex-1 flex gap-1">
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="flex-1 px-2 py-1 border-2 border-ink rounded-[6px] bg-base font-body text-[14px] font-bold text-ink focus:outline-none"
-                    autoFocus
-                  />
-                  <button type="button" onClick={handleEditSave} className="font-body text-[11px] font-bold text-primary px-2">Save</button>
-                  <button type="button" onClick={() => setEditing(null)} className="font-body text-[11px] font-bold text-muted px-1">Cancel</button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => setEditing("name")} className="text-left flex-1 min-w-0">
-                  <p className="font-display font-black text-[20px] text-ink truncate">{goal.name}</p>
-                </button>
-              )}
+              <p className="font-display font-black text-[20px] text-ink truncate flex-1 min-w-0">{goal.name}</p>
             </div>
             <GoalStatusChip health={health} />
           </div>
@@ -663,6 +852,15 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
             >
               {GOAL_STATUS_META[goal.status].label}
             </span>
+            {goal.type !== "DEBT" && (
+              <button
+                type="button"
+                onClick={() => setLogOpen((v) => !v)}
+                className="ml-auto font-body text-[10px] font-black uppercase tracking-[1px] px-3 py-[3px] border-[1.5px] border-ink rounded-[20px] bg-income text-ink active:opacity-75 cursor-pointer"
+              >
+                + Log Expense
+              </button>
+            )}
           </div>
         </div>
 
@@ -673,7 +871,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`flex-1 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[10px] font-black uppercase tracking-[1px] transition-all ${
+              className={`flex-1 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[10px] font-black uppercase tracking-[1px] transition-all cursor-pointer ${
                 tab === t.id ? "bg-primary text-white shadow-neo-xs" : "bg-base text-ink"
               }`}
             >
@@ -683,115 +881,100 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
         </div>
 
         {/* ── Content ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-[100px]">
+        <div className={`flex-1 min-h-0 px-4 pb-6 ${tab === "overview" ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}>
 
           {/* ═══ OVERVIEW TAB ═══ */}
           {tab === "overview" && (
-            <div className="flex flex-col gap-4 pt-2">
-              {/* Progress ring + amounts */}
-              <div className="flex items-center gap-4 p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md">
-                <div className="relative flex-none">
-                  <ProgressRing percent={progress.percentComplete} size={88} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-display font-black text-[18px] text-ink">
-                      {Math.round(progress.percentComplete)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <div>
-                    <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Saved</p>
-                    <p className="font-display font-black text-[22px] text-ink leading-tight">
-                      {formatCurrency(goal.savedAmount, "ILS")}
-                    </p>
-                  </div>
+            <div className="flex-1 min-h-0 flex flex-col gap-3 pt-2">
 
-                  {/* Target amount — editable */}
-                  {editing === "target" ? (
-                    <div className="flex flex-col gap-1">
-                      <label className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Target</label>
-                      <div className="flex gap-1">
-                        <input
-                          type="number"
-                          value={editTarget}
-                          onChange={(e) => setEditTarget(e.target.value)}
-                          className="w-[100px] px-2 py-1 border-2 border-ink rounded-[6px] bg-[#fff9e6] font-display font-black text-[16px] text-ink focus:outline-none"
-                          autoFocus
-                        />
-                        <button type="button" onClick={handleEditSave} className="font-body text-[10px] font-bold text-primary px-1">Save</button>
-                        <button type="button" onClick={() => setEditing(null)} className="font-body text-[10px] font-bold text-muted px-1">X</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setEditing("target")} className="text-left">
-                      <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Target</p>
-                      <p className="font-body text-[13px] font-bold text-muted">
-                        {formatCurrency(goal.targetAmount, "ILS")}
-                      </p>
-                    </button>
-                  )}
+              {/* ── Hero card: name + target + progress timeline ── */}
+              <div className="flex-none border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md p-4">
+                <div className="flex items-start gap-3 mb-1">
+                  {/* Left: saving for + name */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-body text-[9px] font-bold uppercase tracking-[2px] text-muted mb-0.5">Saving for</p>
+                    <p className="font-display font-black text-[24px] text-ink leading-tight truncate">{goal.name}</p>
+                  </div>
+                  {/* Right: target label + amount */}
+                  <div className="flex-none text-right">
+                    <p className="font-body text-[9px] font-bold uppercase tracking-[2px] text-muted mb-0.5">Target</p>
+                    <p className="font-display font-black text-[22px] text-ink leading-tight">{formatCurrency(goal.targetAmount, "ILS")}</p>
+                  </div>
+                  {/* Edit button — far right, aligned to top */}
+                  <button
+                    type="button"
+                    onClick={openEditModal}
+                    aria-label="Edit goal"
+                    className="flex-none self-start w-7 h-7 flex items-center justify-center rounded-[6px] hover:bg-ink/8 active:scale-95 cursor-pointer"
+                  >
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#111008" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
                 </div>
+
+                <HorizontalProgress
+                  percent={progress.percentComplete}
+                  startDate={goal.startDate ? String(goal.startDate) : null}
+                  endDate={goal.endDate ? String(goal.endDate) : null}
+                />
               </div>
 
-              {/* Monthly needed + target date */}
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* ── Stats row: saved · monthly needed · remaining ── */}
+              <div className="flex-none flex gap-2.5">
+                <div className="flex-1 px-3 py-2 border-2 border-ink rounded-[12px] bg-base">
+                  <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted mb-0.5">Saved</p>
+                  <p className="font-display font-black text-[18px] text-ink">{formatCurrency(goal.savedAmount, "ILS")}</p>
+                </div>
                 {progress.monthlyNeeded !== null && progress.monthlyNeeded > 0 && !progress.isComplete && (
-                  <div className="p-3 border-2 border-ink rounded-[12px] bg-[#a57dee]/10">
+                  <div className="flex-1 px-3 py-2 border-2 border-ink rounded-[12px] bg-[#a57dee]/15">
                     <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-primary mb-0.5">Monthly Needed</p>
-                    <p className="font-display font-black text-[18px] text-ink">
-                      {formatCurrency(progress.monthlyNeeded, "ILS")}
-                    </p>
+                    <p className="font-display font-black text-[18px] text-ink">{formatCurrency(progress.monthlyNeeded, "ILS")}</p>
                   </div>
                 )}
-                <div className="p-3 border-2 border-ink rounded-[12px] bg-base">
-                  {editing === "date" ? (
-                    <div className="flex flex-col gap-1">
-                      <label className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted">Target Date</label>
-                      <input
-                        type="date"
-                        value={editDate}
-                        onChange={(e) => setEditDate(e.target.value)}
-                        className="w-full px-1 py-0.5 border-2 border-ink rounded-[4px] bg-base font-body text-[11px] focus:outline-none"
-                        autoFocus
-                      />
-                      <div className="flex gap-1">
-                        <button type="button" onClick={handleEditSave} className="font-body text-[10px] font-bold text-primary">Save</button>
-                        <button type="button" onClick={() => setEditing(null)} className="font-body text-[10px] font-bold text-muted">Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setEditing("date")} className="text-left w-full">
-                      <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-muted mb-0.5">Target Date</p>
-                      <p className="font-display font-black text-[18px] text-ink">
-                        {goal.endDate
-                          ? new Date(goal.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                          : "No deadline"}
-                      </p>
-                      {progress.monthsRemaining !== null && progress.monthsRemaining > 0 && (
-                        <p className="font-body text-[10px] text-muted">{progress.monthsRemaining} months left</p>
-                      )}
-                    </button>
-                  )}
+                <div className="flex-1 px-3 py-2 border-2 border-ink rounded-[12px] bg-[#cce972]/15">
+                  <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a6000] mb-0.5">Remaining</p>
+                  <p className="font-display font-black text-[18px] text-ink">{formatCurrency(progress.remaining, "ILS")}</p>
                 </div>
               </div>
 
-              {/* Remaining */}
-              <div className="p-3 border-2 border-ink rounded-[12px] bg-[#cce972]/15">
-                <p className="font-body text-[9px] font-bold uppercase tracking-[1.5px] text-[#4a6000] mb-0.5">Remaining</p>
-                <p className="font-display font-black text-[22px] text-ink">
-                  {formatCurrency(progress.remaining, "ILS")}
-                </p>
+              {/* ── Monthly breakdown card ── */}
+              <div className="flex-1 min-h-0 flex flex-col border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md overflow-hidden">
+                <div className="flex-none flex items-center justify-between gap-2 px-3 pt-3 pb-1.5">
+                  <p className="font-body text-[11px] font-bold uppercase tracking-[2px] text-muted">Monthly Breakdown</p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleResetUnachieved()}
+                      disabled={resetLoading}
+                      className="font-body text-[9px] font-bold uppercase tracking-[1px] px-2 py-[2px] border-[1.5px] border-muted rounded-[16px] bg-base text-muted hover:border-ink hover:text-ink active:opacity-75 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-default"
+                    >
+                      {resetLoading ? "Resetting…" : "Reset"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddMilestoneOpen(true)}
+                      className="font-body text-[10px] font-black uppercase tracking-[1px] px-3 py-[3px] border-[1.5px] border-ink rounded-[20px] bg-income text-ink active:opacity-75 cursor-pointer"
+                    >
+                      + Achievement
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-0 px-3 pb-3">
+                  <MonthlyTab
+                    goal={goal}
+                    milestones={milestones}
+                    onMilestonesChanged={handleMilestonesChanged}
+                    addOpen={addMilestoneOpen}
+                    setAddOpen={setAddMilestoneOpen}
+                    onDebtAchieved={goal.type === "DEBT" ? handleDebtAchieved : undefined}
+                    resetLoading={resetLoading}
+                  />
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* ═══ MONTHLY TAB ═══ */}
-          {tab === "monthly" && (
-            <MonthlyTab
-              goal={goal}
-              milestones={milestones}
-              onMilestonesChanged={handleMilestonesChanged}
-            />
+            </div>
           )}
 
           {/* ═══ SPENDING TAB (Trip/Event only) ═══ */}
@@ -879,14 +1062,14 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
           )}
         </div>
 
-        {/* ── Bottom action bar ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-[101]">
-          <div className="max-w-[480px] mx-auto px-4 pb-5 pt-2 bg-base border-t-2 border-ink/10">
-            {logOpen && (
-              <div className="mb-3 p-3 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md animate-[slideUp_150ms_ease-out]">
+        {/* ── Log Expense panel (fixed bottom, shown only when open) ── */}
+        {logOpen && (
+          <div className="fixed bottom-0 left-0 right-0 z-[101]">
+            <div className="max-w-[480px] mx-auto px-4 pb-5 pt-3 bg-base border-t-2 border-ink/10">
+              <div className="p-3 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-md animate-[slideUp_150ms_ease-out]">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-display font-black text-[16px] text-ink uppercase tracking-[0.5px]">Log Expense</p>
-                  <button type="button" onClick={() => setLogOpen(false)} className="font-body text-[12px] font-bold text-muted">Cancel</button>
+                  <button type="button" onClick={() => setLogOpen(false)} className="font-body text-[12px] font-bold text-muted cursor-pointer">Cancel</button>
                 </div>
 
                 {isTripEvent && spendingPlan.length > 0 && (
@@ -898,7 +1081,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                           key={item.category}
                           type="button"
                           onClick={() => setLogCategory(item.category)}
-                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${logCategory === item.category ? "bg-primary text-white" : "bg-base text-ink"}`}
+                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all cursor-pointer ${logCategory === item.category ? "bg-primary text-white" : "bg-base text-ink"}`}
                         >
                           {item.category}
                         </button>
@@ -916,7 +1099,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                           key={c}
                           type="button"
                           onClick={() => setLogCategory(c)}
-                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all ${logCategory === c ? "bg-primary text-white" : "bg-base text-ink"}`}
+                          className={`px-2.5 py-1 border-[1.5px] border-ink rounded-[20px] font-body text-[10px] font-bold transition-all cursor-pointer ${logCategory === c ? "bg-primary text-white" : "bg-base text-ink"}`}
                         >
                           {c}
                         </button>
@@ -924,6 +1107,29 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                     </div>
                   </div>
                 )}
+
+                <div className="mb-2">
+                  <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Month & Year</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={logMonth}
+                      onChange={(e) => setLogMonth(Number(e.target.value))}
+                      className="flex-1 px-2 py-1.5 border-2 border-ink rounded-[6px] bg-base font-body text-[12px] text-ink focus:outline-none"
+                    >
+                      {MONTH_NAMES.map((name, i) => (
+                        <option key={name} value={i + 1}>{name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      value={logYear}
+                      onChange={(e) => setLogYear(Number(e.target.value))}
+                      min={2020}
+                      max={2100}
+                      className="flex-1 px-2 py-1.5 border-2 border-ink rounded-[6px] bg-base font-body text-[12px] text-ink focus:outline-none"
+                    />
+                  </div>
+                </div>
 
                 <div className="mb-2">
                   <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-ink">Description</label>
@@ -950,62 +1156,147 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
                   type="button"
                   onClick={logExpense}
                   disabled={(parseFloat(logAmount) || 0) <= 0 || logSaving}
-                  className="font-body w-full mt-2 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-alert text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
+                  className="font-body w-full mt-2 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-alert text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                 >
                   {logSaving ? "Saving..." : "Log Expense"}
                 </button>
               </div>
-            )}
+            </div>
+          </div>
+        )}
+      </div>
 
-            {!logOpen && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLogOpen(true)}
-                  className="font-body flex-1 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-income text-ink shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-                >
-                  + Log Expense
-                </button>
-                {goal.status !== "COMPLETE" && (
-                  <button
-                    type="button"
-                    onClick={markComplete}
-                    className="font-body flex-none px-4 py-2.5 text-[11px] font-black uppercase tracking-[1px] border-[2.5px] border-ink rounded-[10px] bg-goal text-ink shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-                  >
-                    Complete
-                  </button>
-                )}
-                {confirmDelete ? (
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={deleteGoal}
-                      className="font-body flex-none px-3 py-2.5 text-[10px] font-black uppercase tracking-[1px] border-[2.5px] border-ink rounded-[10px] bg-alert text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className="font-body flex-none px-3 py-2.5 text-[10px] font-black uppercase tracking-[1px] border-2 border-ink rounded-[10px] bg-base text-ink"
-                    >
-                      No
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="font-body flex-none px-3 py-2.5 text-[11px] font-black uppercase tracking-[1px] border-[2.5px] border-ink rounded-[10px] bg-alert text-white shadow-neo-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
-            )}
+      {/* ── Edit Goal Modal ── */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setEditModalOpen(false)}
+            className="absolute inset-0 bg-ink/40 cursor-default"
+          />
+          <div className="relative z-10 w-full max-w-[340px] p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-lg flex flex-col gap-3">
+            <p className="font-display font-black text-[14px] text-ink uppercase tracking-[0.5px]">Edit Goal</p>
+
+            <div>
+              <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Goal Name</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-2.5 py-1.5 border-2 border-ink rounded-[8px] bg-base font-body text-[14px] font-bold text-ink focus:outline-none"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Target Amount</label>
+              <input
+                type="number"
+                value={editTarget}
+                onChange={(e) => setEditTarget(e.target.value)}
+                min={0}
+                className="w-full px-2.5 py-1.5 border-2 border-ink rounded-[8px] bg-[#fff9e6] font-display font-black text-[16px] text-ink focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="font-body block text-[9px] font-bold uppercase tracking-[1.5px] mb-1 text-muted">Target Date</label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="w-full px-2.5 py-1.5 border-2 border-ink rounded-[8px] bg-base font-body text-[12px] text-ink focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-2 mt-1">
+              <button
+                type="button"
+                onClick={handleEditModalSave}
+                className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="flex-none px-4 py-2 border-[1.5px] border-ink rounded-[8px] font-body text-[11px] font-bold text-muted cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Debt Transaction Confirmation Modal ── */}
+      {pendingDebtTransaction && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => confirmAddDebtTransaction(false)}
+            className="absolute inset-0 bg-ink/40 cursor-default"
+          />
+          <div className="relative z-10 w-full max-w-[340px] p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-lg flex flex-col gap-3">
+            <p className="font-display font-black text-[16px] text-ink uppercase tracking-[0.5px]">Add to Transactions?</p>
+            <p className="font-body text-[13px] text-ink">
+              Add this {formatCurrency(pendingDebtTransaction.amount, "ILS")} payoff to your transaction history?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => confirmAddDebtTransaction(true)}
+                className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+              >
+                Yes, Add It
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmAddDebtTransaction(false)}
+                className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-base text-ink shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+              >
+                No Thanks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Expense Transaction Confirmation Modal ── */}
+      {pendingExpenseTransaction && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => finalizeExpenseLog(false)}
+            className="absolute inset-0 bg-ink/40 cursor-default"
+          />
+          <div className="relative z-10 w-full max-w-[340px] p-4 border-[2.5px] border-ink rounded-[14px] bg-base shadow-neo-lg flex flex-col gap-3">
+            <p className="font-display font-black text-[16px] text-ink uppercase tracking-[0.5px]">Add to Transactions?</p>
+            <p className="font-body text-[13px] text-ink">
+              Add this {formatCurrency(pendingExpenseTransaction.amount, "ILS")} expense to your transaction history?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => finalizeExpenseLog(true)}
+                className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-primary text-white shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+              >
+                Yes, Add It
+              </button>
+              <button
+                type="button"
+                onClick={() => finalizeExpenseLog(false)}
+                className="flex-1 py-2 border-[2px] border-ink rounded-[8px] font-body text-[11px] font-black uppercase tracking-[1px] bg-base text-ink shadow-neo-xs active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
+              >
+                No Thanks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes slideUp {

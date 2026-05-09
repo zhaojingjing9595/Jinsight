@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Goal" ALTER COLUMN "startDate" SET DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "GoalMilestone" ADD COLUMN     "isCustom" BOOLEAN NOT NULL DEFAULT false;

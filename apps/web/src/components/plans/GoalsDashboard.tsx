@@ -59,10 +59,29 @@ export function GoalsDashboard() {
     load();
   }, [load]);
 
+  async function handleMarkComplete(goalId: string) {
+    try {
+      await trpcMutate("goals.updateStatus", { id: goalId, status: "COMPLETE" });
+      load();
+    } catch (err) {
+      console.error("Failed to mark goal complete:", err);
+    }
+  }
+
+  async function handleDeleteGoal(goalId: string) {
+    try {
+      await trpcMutate("goals.delete", { id: goalId });
+      if (selectedGoal?.id === goalId) setSelectedGoal(null);
+      load();
+    } catch (err) {
+      console.error("Failed to delete goal:", err);
+    }
+  }
+
   async function handleCreate(data: GoalFormData) {
     if (!accountId) return;
     try {
-      await trpcMutate("goals.create", {
+      const result = await trpcMutate<{ goal: Goal }>("goals.create", {
         accountId,
         type: data.type,
         name: data.name,
@@ -75,6 +94,7 @@ export function GoalsDashboard() {
       });
       setFormOpen(false);
       load();
+      setSelectedGoal(result.goal);
     } catch (err) {
       console.error("Failed to create goal:", err);
     }
@@ -99,7 +119,7 @@ export function GoalsDashboard() {
         <button
           type="button"
           onClick={() => setFormOpen(true)}
-          className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors"
+          className="font-body w-full py-2.5 text-[12px] font-black uppercase tracking-[1.5px] text-primary border-2 border-dashed border-primary/50 rounded-[10px] active:bg-primary/5 transition-colors cursor-pointer"
         >
           + New Goal
         </button>
@@ -118,7 +138,7 @@ export function GoalsDashboard() {
           <button
             type="button"
             onClick={() => setFormOpen(true)}
-            className="font-body mt-2 px-6 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-primary text-white shadow-neo-md active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+            className="font-body mt-2 px-6 py-2.5 text-[12px] font-black uppercase tracking-[1.5px] border-[2.5px] border-ink rounded-[10px] bg-primary text-white shadow-neo-md active:translate-x-[1px] active:translate-y-[1px] active:shadow-none cursor-pointer"
           >
             Create Your First Goal
           </button>
@@ -136,7 +156,7 @@ export function GoalsDashboard() {
               <button
                 type="button"
                 onClick={() => setCompletedExpanded(!completedExpanded)}
-                className="flex items-center gap-1.5 mb-2"
+                className="flex items-center gap-1.5 mb-2 cursor-pointer"
               >
                 <span className="font-body text-[11px] font-bold uppercase tracking-[2px] text-muted">
                   {group.label}
@@ -157,7 +177,13 @@ export function GoalsDashboard() {
             {showGoals && (
               <div className="flex flex-col gap-2.5">
                 {group.goals.map((goal) => (
-                  <GoalCard key={goal.id} goal={goal} onClick={() => setSelectedGoal(goal)} />
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    onClick={() => setSelectedGoal(goal)}
+                    onMarkComplete={() => handleMarkComplete(goal.id)}
+                    onDelete={() => handleDeleteGoal(goal.id)}
+                  />
                 ))}
               </div>
             )}
@@ -179,7 +205,6 @@ export function GoalsDashboard() {
           goal={selectedGoal}
           onClose={() => setSelectedGoal(null)}
           onUpdated={() => {
-            setSelectedGoal(null);
             load();
           }}
         />

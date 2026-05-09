@@ -31,20 +31,23 @@ async function assertGoalAccess(ctx: { userId: string; prisma: any }, goalId: st
   return goal;
 }
 
-/** Redistribute remaining amount equally among all unachieved milestones. */
+/** Redistribute remaining amount equally among unachieved, non-custom milestones.
+ * Achieved and custom milestones are locked and not recalculated. */
 async function recalcUnachieved(prisma: any, goalId: string, targetAmount: number) {
   const all = await prisma.goalMilestone.findMany({ where: { goalId } });
   const achieved = all.filter((m: any) => m.isAchieved);
-  const unachieved = all.filter((m: any) => !m.isAchieved);
+  const custom = all.filter((m: any) => m.isCustom && !m.isAchieved);
+  const autoUnachieved = all.filter((m: any) => !m.isAchieved && !m.isCustom);
 
-  if (unachieved.length === 0) return;
+  if (autoUnachieved.length === 0) return;
 
   const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
-  const remaining = Math.max(0, targetAmount - achievedSum);
-  const perMonth = remaining / unachieved.length;
+  const customSum = custom.reduce((s: number, m: any) => s + m.amount, 0);
+  const remaining = Math.max(0, targetAmount - achievedSum - customSum);
+  const perMonth = remaining / autoUnachieved.length;
 
   await prisma.goalMilestone.updateMany({
-    where: { goalId, isAchieved: false },
+    where: { goalId, isAchieved: false, isCustom: false },
     data: { amount: perMonth },
   });
 }
@@ -99,33 +102,41 @@ export const goalMilestonesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const milestone = await assertMilestoneAccess(ctx, input.id);
 
-      if (milestone.isAchieved) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot edit an achieved milestone" });
-      }
-
       const updated = await ctx.prisma.goalMilestone.update({
         where: { id: input.id },
+        data: { amount: input.amount, isCustom: true },
+      });
+
+      // If there's a linked transaction (e.g., from debt payoff), update its amount too
+      await ctx.prisma.transaction.updateMany({
+        where: { milestoneId: input.id },
         data: { amount: input.amount },
       });
 
-      // Recalculate all OTHER unachieved milestones based on what remains
-      const all = await ctx.prisma.goalMilestone.findMany({ where: { goalId: milestone.goalId } });
-      const achieved = all.filter((m: any) => m.isAchieved);
-      const otherUnachieved = all.filter((m: any) => !m.isAchieved && m.id !== input.id);
+      // Only recalculate if milestone is not achieved
+      if (!milestone.isAchieved) {
+        // Recalculate other AUTO (non-custom) unachieved milestones based on what remains
+        const all = await ctx.prisma.goalMilestone.findMany({ where: { goalId: milestone.goalId } });
+        const achieved = all.filter((m: any) => m.isAchieved);
+        const custom = all.filter((m: any) => m.isCustom && !m.isAchieved && m.id !== input.id);
+        const otherAuto = all.filter((m: any) => !m.isAchieved && !m.isCustom && m.id !== input.id);
 
-      if (otherUnachieved.length > 0) {
-        const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
-        const remaining = Math.max(0, milestone.goal.targetAmount - achievedSum - input.amount);
-        const perMonth = remaining / otherUnachieved.length;
+        if (otherAuto.length > 0) {
+          const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
+          const customSum = custom.reduce((s: number, m: any) => s + m.amount, 0);
+          const remaining = Math.max(0, milestone.goal.targetAmount - achievedSum - customSum - input.amount);
+          const perMonth = remaining / otherAuto.length;
 
-        await ctx.prisma.goalMilestone.updateMany({
-          where: {
-            goalId: milestone.goalId,
-            isAchieved: false,
-            id: { not: input.id },
-          },
-          data: { amount: perMonth },
-        });
+          await ctx.prisma.goalMilestone.updateMany({
+            where: {
+              goalId: milestone.goalId,
+              isAchieved: false,
+              isCustom: false,
+              id: { not: input.id },
+            },
+            data: { amount: perMonth },
+          });
+        }
       }
 
       return { milestone: updated };
@@ -174,25 +185,51 @@ export const goalMilestonesRouter = router({
           year: input.year,
           month: input.month,
           amount: input.amount,
+          isCustom: true,
         },
       });
 
-      // Recalculate other unachieved milestones accounting for the new one's amount
+      // Recalculate other AUTO (non-custom) unachieved milestones accounting for the new custom one's amount
       const all = await ctx.prisma.goalMilestone.findMany({ where: { goalId: input.goalId } });
       const achieved = all.filter((m: any) => m.isAchieved);
-      const otherUnachieved = all.filter((m: any) => !m.isAchieved && m.id !== milestone.id);
+      const custom = all.filter((m: any) => m.isCustom && !m.isAchieved && m.id !== milestone.id);
+      const otherAuto = all.filter((m: any) => !m.isAchieved && !m.isCustom && m.id !== milestone.id);
 
-      if (otherUnachieved.length > 0) {
+      if (otherAuto.length > 0) {
         const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
-        const remaining = Math.max(0, goal.targetAmount - achievedSum - input.amount);
-        const perMonth = remaining / otherUnachieved.length;
+        const customSum = custom.reduce((s: number, m: any) => s + m.amount, 0);
+        const remaining = Math.max(0, goal.targetAmount - achievedSum - customSum - input.amount);
+        const perMonth = remaining / otherAuto.length;
 
         await ctx.prisma.goalMilestone.updateMany({
-          where: { goalId: input.goalId, isAchieved: false, id: { not: milestone.id } },
+          where: { goalId: input.goalId, isAchieved: false, isCustom: false, id: { not: milestone.id } },
           data: { amount: perMonth },
         });
       }
 
       return { milestone };
+    }),
+
+  resetUnachieved: protectedProcedure
+    .input(z.object({ goalId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const goal = await assertGoalAccess(ctx, input.goalId);
+
+      // Reset all unachieved milestones to auto-generated (isCustom = false)
+      await ctx.prisma.goalMilestone.updateMany({
+        where: { goalId: input.goalId, isAchieved: false },
+        data: { isCustom: false },
+      });
+
+      // Recalculate amounts
+      await recalcUnachieved(ctx.prisma, input.goalId, goal.targetAmount);
+
+      // Return updated milestones
+      const milestones = await ctx.prisma.goalMilestone.findMany({
+        where: { goalId: input.goalId },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      });
+
+      return { milestones };
     }),
 });

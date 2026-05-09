@@ -116,23 +116,25 @@ model AccountMember {
 }
 
 model Transaction {
-  id                String      @id @default(uuid())
+  id                String         @id @default(uuid())
   accountId         String
   amount            Float
   type              TxType
   category          String
   description       String?
   date              DateTime
-  isRecurring       Boolean     @default(false)
+  isRecurring       Boolean        @default(false)
   budgetPlanId      String?
   goalId            String?
   billId            String?
-  excludeFromBudget Boolean     @default(false)
-  createdAt         DateTime    @default(now())
-  account           Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  budgetPlan        BudgetPlan? @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
-  goal              Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
-  bill              Bill?       @relation(fields: [billId], references: [id], onDelete: SetNull)
+  milestoneId       String?
+  excludeFromBudget Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  account           Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  budgetPlan        BudgetPlan?    @relation(fields: [budgetPlanId], references: [id], onDelete: SetNull)
+  goal              Goal?          @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  bill              Bill?          @relation(fields: [billId], references: [id], onDelete: SetNull)
+  milestone         GoalMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 }
 
 model Budget {
@@ -208,15 +210,17 @@ model Goal {
 }
 
 model GoalMilestone {
-  id         String    @id @default(cuid())
-  goalId     String
-  year       Int
-  month      Int
-  amount     Float
-  isAchieved Boolean   @default(false)
-  achievedAt DateTime?
-  createdAt  DateTime  @default(now())
-  goal       Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  goalId       String
+  year         Int
+  month        Int
+  amount       Float
+  isAchieved   Boolean        @default(false)
+  achievedAt   DateTime?
+  isCustom     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  goal         Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@unique([goalId, year, month])
 }

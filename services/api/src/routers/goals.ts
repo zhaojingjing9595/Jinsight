@@ -50,21 +50,23 @@ function buildMilestones(
 
 /**
  * Recalculate unachieved milestone amounts after a change.
- * Achieved rows are locked; remaining budget is split equally among unachieved rows.
+ * Achieved and custom rows are locked; remaining budget is split equally among auto-generated unachieved rows.
  */
 async function recalcUnachieved(prisma: any, goalId: string, targetAmount: number) {
   const all = await prisma.goalMilestone.findMany({ where: { goalId } });
   const achieved = all.filter((m: any) => m.isAchieved);
-  const unachieved = all.filter((m: any) => !m.isAchieved);
+  const custom = all.filter((m: any) => m.isCustom && !m.isAchieved);
+  const autoUnachieved = all.filter((m: any) => !m.isAchieved && !m.isCustom);
 
-  if (unachieved.length === 0) return;
+  if (autoUnachieved.length === 0) return;
 
   const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
-  const remaining = Math.max(0, targetAmount - achievedSum);
-  const perMonth = remaining / unachieved.length;
+  const customSum = custom.reduce((s: number, m: any) => s + m.amount, 0);
+  const remaining = Math.max(0, targetAmount - achievedSum - customSum);
+  const perMonth = remaining / autoUnachieved.length;
 
   await prisma.goalMilestone.updateMany({
-    where: { goalId, isAchieved: false },
+    where: { goalId, isAchieved: false, isCustom: false },
     data: { amount: perMonth },
   });
 }
@@ -209,20 +211,26 @@ export const goalsRouter = router({
       const startDateChanged = startDate !== undefined && String(newStartDate) !== String(existing.startDate);
 
       if (endDateChanged || startDateChanged) {
-        // Regenerate all unachieved milestones for the new date range,
-        // preserving achieved ones.
+        // Regenerate unachieved auto-generated milestones for the new date range,
+        // preserving achieved and custom ones.
         const achieved = await ctx.prisma.goalMilestone.findMany({
           where: { goalId: id, isAchieved: true },
         });
-        await ctx.prisma.goalMilestone.deleteMany({ where: { goalId: id, isAchieved: false } });
+        const custom = await ctx.prisma.goalMilestone.findMany({
+          where: { goalId: id, isCustom: true, isAchieved: false },
+        });
+        await ctx.prisma.goalMilestone.deleteMany({ where: { goalId: id, isAchieved: false, isCustom: false } });
 
         if (newEndDate) {
           const achievedSum = achieved.reduce((s: number, m: any) => s + m.amount, 0);
-          const remaining = Math.max(0, newTarget - achievedSum);
+          const customSum = custom.reduce((s: number, m: any) => s + m.amount, 0);
+          const remaining = Math.max(0, newTarget - achievedSum - customSum);
           const newMilestones = buildMilestones(id, newStartDate, newEndDate, remaining);
-          // Skip months that already have an achieved row
-          const achievedKeys = new Set(achieved.map((m: any) => `${m.year}-${m.month}`));
-          const toInsert = newMilestones.filter((m) => !achievedKeys.has(`${m.year}-${m.month}`));
+          // Skip months that already have an achieved or custom row
+          const preservedKeys = new Set(
+            [...achieved, ...custom].map((m: any) => `${m.year}-${m.month}`)
+          );
+          const toInsert = newMilestones.filter((m) => !preservedKeys.has(`${m.year}-${m.month}`));
           if (toInsert.length > 0) {
             await ctx.prisma.goalMilestone.createMany({ data: toInsert, skipDuplicates: true });
           }
