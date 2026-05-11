@@ -39,8 +39,8 @@ export default function LoginPage() {
             headers: { Authorization: `Bearer ${data.session.access_token}` },
           },
         );
-        const json = await res.json() as { result?: { data?: { json?: { provisioned?: boolean } } } };
-        const provisioned = json?.result?.data?.json?.provisioned;
+        const json = await res.json() as { result?: { data?: { provisioned?: boolean } } };
+        const provisioned = json?.result?.data?.provisioned;
         if (!provisioned) {
           await supabase.auth.signOut();
           setError("No account found for this email. Please sign up first.");

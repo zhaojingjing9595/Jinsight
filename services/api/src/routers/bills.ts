@@ -155,10 +155,13 @@ export const billsRouter = router({
     }),
 
   markPaid: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string(), date: z.string().datetime().optional() }))
     .mutation(async ({ ctx, input }) => {
       const existing = await assertBillAccess(ctx, input.id);
       const now = new Date();
+      const paidDate = input.date
+        ? new Date(input.date)
+        : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
       await ctx.prisma.transaction.create({
         data: {
@@ -167,7 +170,7 @@ export const billsRouter = router({
           amount: existing.amount,
           category: existing.category,
           description: existing.name,
-          date: now,
+          date: paidDate,
           billId: input.id,
         },
       });
@@ -176,14 +179,14 @@ export const billsRouter = router({
         const nextDue = rollForward(existing.dueDate, existing.recurrence);
         const bill = await ctx.prisma.bill.update({
           where: { id: input.id },
-          data: { lastPaidDate: now, lastPaidAmount: existing.amount, dueDate: nextDue, isPaid: false },
+          data: { lastPaidDate: paidDate, lastPaidAmount: existing.amount, dueDate: nextDue, isPaid: false },
         });
         return { bill };
       }
 
       const bill = await ctx.prisma.bill.update({
         where: { id: input.id },
-        data: { isPaid: true, lastPaidDate: now, lastPaidAmount: existing.amount },
+        data: { isPaid: true, lastPaidDate: paidDate, lastPaidAmount: existing.amount },
       });
       return { bill };
     }),

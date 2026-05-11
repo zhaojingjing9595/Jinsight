@@ -7,6 +7,7 @@ import type { Transaction } from "@jinsight/core";
 import { CategoryIcon } from "./CategoryIcon";
 import { BillRow as BillsPageBillRow, daysUntil as billDaysUntil } from "@/components/bills/BillRow";
 import { AddBillModal } from "@/components/bills/AddBillModal";
+import { DropdownMenu } from "./DropdownMenu";
 
 type ApiBill = {
   id: string;
@@ -33,9 +34,7 @@ function billPaymentDisplayAmount(b: ApiBill): number {
 type EditPatch = { description: string | null; amount: number };
 
 function formatDateTime(date: Date) {
-  const d = date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-  const t = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  return `${d} · ${t}`;
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
 function daysUntil(dueDate: string): number {

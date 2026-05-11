@@ -28,5 +28,6 @@ export function formatShortDate(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
+    timeZone: "UTC",
   }).format(date);
 }

@@ -8,6 +8,7 @@ import { ChartSection } from "@/components/ChartSection";
 import { BillsAndTransactionsCard, BillsCard, TransactionsCard } from "@/components/BillsAndTransactionsCard";
 import { BalanceEditModal } from "@/components/BalanceEditModal";
 import { trpcQuery, trpcMutate } from "@/lib/api";
+import { formatLocalDateKey, dateKeyToUtcDatetimeISO } from "@/lib/dates";
 
 type ApiTransaction = {
   id: string;
@@ -312,7 +313,7 @@ export default function DashboardPage() {
               }
             }}
             onBillMarkPaid={async (id) => {
-              await trpcMutate("bills.markPaid", { id });
+              await trpcMutate("bills.markPaid", { id, date: dateKeyToUtcDatetimeISO(formatLocalDateKey(new Date())) });
               window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
             }}
             onBillDelete={async (id) => {
@@ -368,7 +369,7 @@ export default function DashboardPage() {
             bills={bills}
             customCategoryColors={customColorMap}
             onBillMarkPaid={async (id) => {
-              await trpcMutate("bills.markPaid", { id });
+              await trpcMutate("bills.markPaid", { id, date: dateKeyToUtcDatetimeISO(formatLocalDateKey(new Date())) });
               window.dispatchEvent(new CustomEvent("jinsight:transaction-added"));
             }}
             onBillDelete={async (id) => {

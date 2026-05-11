@@ -10,6 +10,7 @@ import {
 } from "@jinsight/core";
 import type { Goal, GoalMilestone, SpendingPlanItem } from "@jinsight/core";
 import { trpcQuery, trpcMutate } from "@/lib/api";
+import { formatLocalDateKey, dateKeyToUtcDatetimeISO } from "@/lib/dates";
 import { GoalStatusChip } from "./GoalStatusChip";
 import { NumPad } from "@/components/NumPad";
 
@@ -663,16 +664,13 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
 
       // Then create transaction if user wants
       if (add && accountId) {
-        // Create date from milestone's year and month (end of month)
-        const txDate = new Date(pendingDebtTransaction.year, pendingDebtTransaction.month, 1);
-
         await trpcMutate("transactions.create", {
           accountId,
           amount: pendingDebtTransaction.amount,
           type: "EXPENSE",
           category: "debt_payment",
           description: `${goal.name} - Debt Payoff`,
-          date: txDate.toISOString(),
+          date: dateKeyToUtcDatetimeISO(`${pendingDebtTransaction.year}-${String(pendingDebtTransaction.month).padStart(2, "0")}-01`),
           goalId: goal.id,
           milestoneId: pendingDebtTransaction.id,
           excludeFromBudget: true,
@@ -706,7 +704,7 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
         type: "EXPENSE",
         category: pendingExpenseTransaction.category || "other",
         description: pendingExpenseTransaction.desc || undefined,
-        date: new Date().toISOString(),
+        date: dateKeyToUtcDatetimeISO(formatLocalDateKey(new Date())),
         goalId: goal.id,
         excludeFromBudget: true,
       });
@@ -759,16 +757,15 @@ export function GoalDetailSheet({ goal: initialGoal, onClose, onUpdated }: GoalD
     setLogSaving(true);
     try {
       if (addToTransactions) {
-        // Create date from selected year and month (end of month)
-        const txDate = new Date(pendingExpenseTransaction.year || logYear, (pendingExpenseTransaction.month || logMonth), 1);
-
+        const txMonth = pendingExpenseTransaction.month || logMonth;
+        const txYear = pendingExpenseTransaction.year || logYear;
         await trpcMutate("transactions.create", {
           accountId,
           amount: pendingExpenseTransaction.amount,
           type: "EXPENSE",
           category: pendingExpenseTransaction.category,
           description: pendingExpenseTransaction.desc || undefined,
-          date: txDate.toISOString(),
+          date: dateKeyToUtcDatetimeISO(`${txYear}-${String(txMonth).padStart(2, "0")}-01`),
           goalId: goal.id,
           excludeFromBudget: true,
         });
