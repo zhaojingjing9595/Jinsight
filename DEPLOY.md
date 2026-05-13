@@ -27,7 +27,8 @@
 
 1. Connect Render to the GitHub repo
 2. Create a **Web Service** pointing to `services/api/`
-3. Build command: `npm install && npx prisma generate && npm run build`
+3. Build command: `pnpm install && npx prisma generate && pnpm run build`
+   > Note: `@prisma/client` is externalized from the bundle — `prisma generate` must run before `pnpm run build`
 4. Start command: `node dist/index.js` (or `npm start`)
 5. Set all env vars in Render dashboard
 6. Note the public API URL (e.g. `https://jinsight-api.onrender.com`)

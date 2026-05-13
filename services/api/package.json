@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
-    "build": "tsc",
+    "build": "tsup",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
@@ -29,6 +29,7 @@
     "@jinsight/config": "workspace:*",
     "@types/node": "^22",
     "prisma": "^6.6.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "vitest": "^4.1.6"
