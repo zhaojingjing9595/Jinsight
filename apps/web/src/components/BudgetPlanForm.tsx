@@ -116,7 +116,7 @@ export function BudgetPlanForm() {
   const remaining  = totalNum - allocated;
 
   function addAllocation() {
-    setAllocations([...allocations, { category: "", limit: 0 }]);
+    setAllocations([...allocations, { category: "" as Category, limit: 0 }]);
     setPickingCategoryFor(allocations.length);
   }
 
@@ -330,7 +330,7 @@ export function BudgetPlanForm() {
                       onClick={() => setPickingCategoryFor(i)}
                       className={`font-body flex-1 text-left text-[12px] font-bold ${alloc.category ? "text-ink" : "text-muted"}`}
                     >
-                      {alloc.category ? (meta?.label || meta?.name) : "Select category"}
+                      {alloc.category ? (meta?.label) : "Select category"}
                     </button>
                     <input
                       type="number"

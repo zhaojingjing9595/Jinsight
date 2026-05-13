@@ -91,6 +91,7 @@ function MonthlyTab({
   const [addMonth, setAddMonth] = useState(new Date().getMonth() + 1);
   const [addAmount, setAddAmount] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [addSaving, setAddSaving] = useState(false);
 
   const existingKeys = new Set(milestones.map((m) => `${m.year}-${m.month}`));

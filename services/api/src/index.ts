@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import { appRouter } from "./routers/index";
@@ -19,7 +19,7 @@ await server.register(fastifyTRPCPlugin, {
   prefix: "/trpc",
   trpcOptions: {
     router: appRouter,
-    createContext: async ({ req }): Promise<Context> => {
+    createContext: async ({ req }: { req: FastifyRequest }): Promise<Context> => {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith("Bearer ")) {
         return { userId: null, userEmail: null, prisma };

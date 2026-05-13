@@ -42,7 +42,7 @@ type ApiBill = {
   amount: number;
   dueDate: string;
   category: string;
-  recurrence?: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+  recurrence?: "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "ANNUAL" | "WEEKLY";
   isRecurring?: boolean;
   isSubscription?: boolean;
   isPaid: boolean;

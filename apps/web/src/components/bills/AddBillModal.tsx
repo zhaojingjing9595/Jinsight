@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AddBillForm } from "@/components/bills/AddBillForm";
 
-type Recurrence = "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+type Recurrence = "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "ANNUAL" | "WEEKLY";
 
 type Bill = {
   id: string;
