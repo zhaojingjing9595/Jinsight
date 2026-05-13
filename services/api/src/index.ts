@@ -12,7 +12,8 @@ await server.register(cors, {
   origin: [
     "http://localhost:3000",
     "http://localhost:8081",
-  ],
+    process.env.WEB_URL ?? "",
+  ].filter(Boolean),
 });
 
 await server.register(fastifyTRPCPlugin, {
