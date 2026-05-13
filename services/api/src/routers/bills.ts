@@ -1,42 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../lib/trpc";
+import { rollForward, rollBackward } from "../lib/billDates";
 
-const RECURRENCE = z.enum(["MONTHLY", "ANNUAL", "WEEKLY", "CUSTOM"]);
-
-function rollForward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"): Date {
-  const d = new Date(date);
-  switch (recurrence) {
-    case "WEEKLY":
-      d.setDate(d.getDate() + 7);
-      return d;
-    case "ANNUAL":
-      d.setFullYear(d.getFullYear() + 1);
-      return d;
-    case "MONTHLY":
-    case "CUSTOM":
-    default:
-      d.setMonth(d.getMonth() + 1);
-      return d;
-  }
-}
-
-function rollBackward(date: Date, recurrence: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM"): Date {
-  const d = new Date(date);
-  switch (recurrence) {
-    case "WEEKLY":
-      d.setDate(d.getDate() - 7);
-      return d;
-    case "ANNUAL":
-      d.setFullYear(d.getFullYear() - 1);
-      return d;
-    case "MONTHLY":
-    case "CUSTOM":
-    default:
-      d.setMonth(d.getMonth() - 1);
-      return d;
-  }
-}
+const RECURRENCE = z.enum(["MONTHLY", "BIMONTHLY", "QUARTERLY", "ANNUAL", "WEEKLY"]);
 
 async function assertBillAccess(ctx: { userId: string; prisma: any }, billId: string) {
   const bill = await ctx.prisma.bill.findUnique({ where: { id: billId } });

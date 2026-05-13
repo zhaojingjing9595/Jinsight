@@ -54,9 +54,10 @@ enum GoalStatus {
 
 enum BillRecurrence {
   MONTHLY
+  BIMONTHLY
+  QUARTERLY
   ANNUAL
   WEEKLY
-  CUSTOM
 }
 
 enum AccountMemberRole {

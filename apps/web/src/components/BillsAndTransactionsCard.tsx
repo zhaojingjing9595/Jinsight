@@ -15,7 +15,7 @@ type ApiBill = {
   amount: number;
   dueDate: string;
   category: string;
-  recurrence?: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+  recurrence?: "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "ANNUAL" | "WEEKLY";
   isRecurring?: boolean;
   isSubscription?: boolean;
   reminderDays?: number;
@@ -106,13 +106,11 @@ function TxListMergedRowTransaction({
   item,
   editingId,
   pendingId,
-  menuId,
   editDesc,
   editAmount,
   setEditDesc,
   setEditAmount,
   setEditingId,
-  setMenuId,
   startEdit,
   saveEdit,
   handleDelete,
@@ -121,13 +119,11 @@ function TxListMergedRowTransaction({
   item: Extract<TxListMergedItem, { kind: "transaction" }>;
   editingId: string | null;
   pendingId: string | null;
-  menuId: string | null;
   editDesc: string;
   editAmount: string;
   setEditDesc: (s: string) => void;
   setEditAmount: (s: string) => void;
   setEditingId: (id: string | null) => void;
-  setMenuId: (id: string | null) => void;
   startEdit: (t: Transaction) => void;
   saveEdit: (id: string) => void | Promise<void>;
   handleDelete: (transaction: Transaction) => void | Promise<void>;
@@ -172,61 +168,24 @@ function TxListMergedRowTransaction({
           </p>
         </div>
 
-        <div className="flex-none relative ml-0.5 md:ml-1">
-          <button
-            type="button"
-            aria-label="Transaction actions"
+        <div className="flex-none ml-0.5 md:ml-1">
+          <DropdownMenu
             disabled={isPending}
-            onClick={() => setMenuId(menuId === t.id ? null : t.id)}
-            className="w-5 md:w-6 h-5 md:h-6 flex items-center justify-center rounded-[5px] md:rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" className="md:w-[16px] md:h-[16px]" fill="#111008">
-              <circle cx="5" cy="12" r="1.8" />
-              <circle cx="12" cy="12" r="1.8" />
-              <circle cx="19" cy="12" r="1.8" />
-            </svg>
-          </button>
-          {menuId === t.id && (
-            <>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setMenuId(null)}
-                className="fixed inset-0 z-20 cursor-default"
-              />
-              <div className="absolute right-0 top-7 z-30 flex flex-col min-w-[110px] border-2 border-ink rounded-[10px] shadow-neo-sm bg-base overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuId(null);
-                    isEditing ? setEditingId(null) : startEdit(t);
-                  }}
-                  className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-ink hover:bg-ink/5 text-left"
-                >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-                  </svg>
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuId(null);
-                    void handleDelete(t);
-                  }}
-                  className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-alert hover:bg-alert/10 border-t border-ink/20 text-left"
-                >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 6h18" />
-                    <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                  </svg>
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
+            aria-label="Transaction actions"
+            items={[
+              {
+                label: isEditing ? "Cancel edit" : "Edit",
+                icon: <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>,
+                onClick: () => isEditing ? setEditingId(null) : startEdit(t),
+              },
+              {
+                label: "Delete",
+                icon: <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /></svg>,
+                onClick: () => void handleDelete(t),
+                variant: "danger",
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -295,11 +254,9 @@ export function TransactionsCard({
   const [editDesc, setEditDesc] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [menuId, setMenuId] = useState<string | null>(null);
   const [editingBillPaymentId, setEditingBillPaymentId] = useState<string | null>(null);
   const [editBillPaymentAmount, setEditBillPaymentAmount] = useState("");
   const [pendingBillPaymentId, setPendingBillPaymentId] = useState<string | null>(null);
-  const [menuBillPaymentId, setMenuBillPaymentId] = useState<string | null>(null);
 
   const billActionsEnabled = Boolean(onBillPaymentAmountEdit && onBillPaymentRevert);
 
@@ -369,7 +326,6 @@ export function TransactionsCard({
     try {
       await onBillPaymentRevert?.(billId);
       setEditingBillPaymentId(null);
-      setMenuBillPaymentId(null);
     } finally {
       setPendingBillPaymentId(null);
     }
@@ -430,13 +386,11 @@ export function TransactionsCard({
                   item={item}
                   editingId={editingId}
                   pendingId={pendingId}
-                  menuId={menuId}
                   editDesc={editDesc}
                   editAmount={editAmount}
                   setEditDesc={setEditDesc}
                   setEditAmount={setEditAmount}
                   setEditingId={setEditingId}
-                  setMenuId={setMenuId}
                   startEdit={startEdit}
                   saveEdit={saveEdit}
                   handleDelete={handleDelete}
@@ -651,11 +605,9 @@ export function BillsAndTransactionsCard({
   const [editDesc, setEditDesc] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [menuId, setMenuId] = useState<string | null>(null);
   const [editingBillPaymentId, setEditingBillPaymentId] = useState<string | null>(null);
   const [editBillPaymentAmount, setEditBillPaymentAmount] = useState("");
   const [pendingBillPaymentId, setPendingBillPaymentId] = useState<string | null>(null);
-  const [menuBillPaymentId, setMenuBillPaymentId] = useState<string | null>(null);
 
   const billActionsEnabled = Boolean(onBillPaymentAmountEdit && onBillPaymentRevert);
 
@@ -725,7 +677,6 @@ export function BillsAndTransactionsCard({
     try {
       await onBillPaymentRevert?.(billId);
       setEditingBillPaymentId(null);
-      setMenuBillPaymentId(null);
     } finally {
       setPendingBillPaymentId(null);
     }
@@ -848,13 +799,11 @@ export function BillsAndTransactionsCard({
                       item={item}
                       editingId={editingId}
                       pendingId={pendingId}
-                      menuId={menuId}
                       editDesc={editDesc}
                       editAmount={editAmount}
                       setEditDesc={setEditDesc}
                       setEditAmount={setEditAmount}
                       setEditingId={setEditingId}
-                      setMenuId={setMenuId}
                       startEdit={startEdit}
                       saveEdit={saveEdit}
                       handleDelete={handleDelete}

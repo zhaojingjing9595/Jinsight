@@ -9,6 +9,7 @@ import {
 } from "@jinsight/core";
 import type { Goal } from "@jinsight/core";
 import { GoalStatusChip } from "./GoalStatusChip";
+import { DropdownMenu } from "@/components/DropdownMenu";
 
 type GoalCardProps = {
   goal: Goal;
@@ -18,7 +19,6 @@ type GoalCardProps = {
 };
 
 export function GoalCard({ goal, onClick, onMarkComplete, onDelete }: GoalCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const progress = computeGoalProgress(goal);
@@ -39,18 +39,6 @@ export function GoalCard({ goal, onClick, onMarkComplete, onDelete }: GoalCardPr
       month: "short",
       year: "numeric",
     });
-  }
-
-  function openMenu(e: React.MouseEvent) {
-    e.stopPropagation();
-    setConfirmDelete(false);
-    setMenuOpen(true);
-  }
-
-  function closeMenu(e?: React.MouseEvent) {
-    e?.stopPropagation();
-    setMenuOpen(false);
-    setConfirmDelete(false);
   }
 
   return (
@@ -81,75 +69,52 @@ export function GoalCard({ goal, onClick, onMarkComplete, onDelete }: GoalCardPr
 
         {/* Three-dot menu */}
         <div
-          className="relative flex-none"
+          className="flex-none"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
+          <DropdownMenu
             aria-label="Goal actions"
-            onClick={openMenu}
-            className="w-7 h-7 flex items-center justify-center rounded-[6px] hover:bg-ink/8 active:scale-95 cursor-pointer"
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="#111008">
-              <circle cx="5" cy="12" r="1.8" />
-              <circle cx="12" cy="12" r="1.8" />
-              <circle cx="19" cy="12" r="1.8" />
-            </svg>
-          </button>
-
-          {menuOpen && (
-            <>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={closeMenu}
-                className="fixed inset-0 z-20 cursor-default"
-              />
-              <div className="absolute right-0 top-8 z-30 min-w-[150px] border-2 border-ink rounded-[10px] bg-base shadow-neo-sm overflow-hidden">
-                {goal.status !== "COMPLETE" && onMarkComplete && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); closeMenu(); onMarkComplete(); }}
-                    className="w-full text-left px-3 py-2.5 font-body text-[12px] font-[600] text-ink hover:bg-[#f5f5f0] flex items-center gap-2 cursor-pointer"
-                  >
-                    <span className="text-income">✓</span> Mark Complete
-                  </button>
-                )}
-                {onDelete && !confirmDelete && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                    className="w-full text-left px-3 py-2.5 font-body text-[12px] font-[600] text-alert hover:bg-alert/5 cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                )}
-                {onDelete && confirmDelete && (
-                  <div className="px-3 py-2.5">
-                    <p className="font-body text-[10px] font-bold text-alert mb-2">Delete this goal?</p>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); closeMenu(); onDelete(); }}
-                        className="flex-1 py-1.5 border-[1.5px] border-alert rounded-[6px] font-body text-[10px] font-black text-white bg-alert cursor-pointer"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-                        className="flex-1 py-1.5 border-[1.5px] border-ink rounded-[6px] font-body text-[10px] font-bold text-muted cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+            items={[
+              ...(goal.status !== "COMPLETE" && onMarkComplete ? [{
+                label: "Mark Complete",
+                icon: <span className="text-income text-[12px]">✓</span>,
+                onClick: () => onMarkComplete(),
+              }] : []),
+              ...(onDelete ? [{
+                label: "Delete",
+                onClick: () => setConfirmDelete(true),
+                variant: "danger" as const,
+              }] : []),
+            ]}
+          />
         </div>
       </div>
+
+      {/* Inline delete confirmation */}
+      {confirmDelete && onDelete && (
+        <div
+          className="flex items-center justify-between gap-2 mb-2.5 px-3 py-2 border-[1.5px] border-alert rounded-[10px] bg-alert/5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="font-body text-[11px] font-bold text-alert">Delete this goal?</p>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); onDelete(); }}
+              className="px-2.5 py-1 border-[1.5px] border-alert rounded-[6px] font-body text-[10px] font-black text-white bg-alert cursor-pointer"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+              className="px-2.5 py-1 border-[1.5px] border-ink rounded-[6px] font-body text-[10px] font-bold text-muted cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Amount row */}
       <div className="flex items-baseline justify-between mb-2">

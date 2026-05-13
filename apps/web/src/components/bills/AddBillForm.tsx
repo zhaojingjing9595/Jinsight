@@ -7,13 +7,14 @@ import { trpcMutate, trpcQuery } from "@/lib/api";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { NewCategoryModal } from "@/components/NewCategoryModal";
 
-type Recurrence = "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+type Recurrence = "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "ANNUAL" | "WEEKLY";
 
 const RECURRENCE_OPTIONS: { value: Recurrence; label: string }[] = [
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "ANNUAL", label: "Annual" },
   { value: "WEEKLY", label: "Weekly" },
-  { value: "CUSTOM", label: "Custom" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "BIMONTHLY", label: "Every 2 Months" },
+  { value: "QUARTERLY", label: "Quarterly" },
+  { value: "ANNUAL", label: "Annual" },
 ];
 
 type Bill = {

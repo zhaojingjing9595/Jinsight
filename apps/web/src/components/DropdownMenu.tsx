@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 export type DropdownMenuItem = {
@@ -23,7 +23,15 @@ const VARIANT_CLASSES: Record<NonNullable<DropdownMenuItem["variant"]>, string> 
   success: "text-income hover:bg-income/10",
 };
 
-type MenuPosition = { top: number; right: number } | { bottom: number; right: number };
+const MENU_WIDTH = 160;
+const MENU_HEIGHT = 160;
+
+type MenuPosition = {
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+};
 
 export function DropdownMenu({ items, disabled, "aria-label": ariaLabel }: DropdownMenuProps) {
   const [pos, setPos] = useState<MenuPosition | null>(null);
@@ -33,11 +41,19 @@ export function DropdownMenu({ items, disabled, "aria-label": ariaLabel }: Dropd
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
-    if (spaceBelow < 160) {
-      setPos({ bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
-    } else {
-      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
+    const spaceRight = window.innerWidth - rect.left;
+
+    const vertical: MenuPosition =
+      spaceBelow < MENU_HEIGHT
+        ? { bottom: window.innerHeight - rect.top + 4 }
+        : { top: rect.bottom + 4 };
+
+    const horizontal: MenuPosition =
+      spaceRight < MENU_WIDTH
+        ? { right: window.innerWidth - rect.right }
+        : { left: rect.left };
+
+    setPos({ ...vertical, ...horizontal });
   }
 
   useEffect(() => {
@@ -74,7 +90,7 @@ export function DropdownMenu({ items, disabled, "aria-label": ariaLabel }: Dropd
           />
           <div
             className="fixed z-[9999] flex flex-col min-w-[130px] border-2 border-ink rounded-[10px] shadow-neo-sm bg-base overflow-hidden"
-            style={pos}
+            style={pos as React.CSSProperties}
           >
             {items.map((item, i) => (
               <button

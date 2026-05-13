@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CATEGORY_META, formatCurrency } from "@jinsight/core";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { DropdownMenu } from "@/components/DropdownMenu";
 
 export type BillRowData = {
   id: string;
@@ -10,7 +11,7 @@ export type BillRowData = {
   amount: number;
   dueDate: string;
   category: string;
-  recurrence?: "MONTHLY" | "ANNUAL" | "WEEKLY" | "CUSTOM";
+  recurrence?: "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "ANNUAL" | "WEEKLY";
   isRecurring?: boolean;
   isPaid: boolean;
   lastPaidDate?: string | null;
@@ -74,8 +75,10 @@ function recurrenceLabel(bill: BillRowData) {
       return `Every ${weekday}`;
     case "ANNUAL":
       return `Every year · ${month} ${day}`;
-    case "CUSTOM":
-      return "Custom schedule";
+    case "BIMONTHLY":
+      return `Every 2 months · ${ordinal(day)}`;
+    case "QUARTERLY":
+      return `Every 3 months · ${ordinal(day)}`;
     case "MONTHLY":
     default:
       return `${ordinal(day)} of every month`;
@@ -84,7 +87,6 @@ function recurrenceLabel(bill: BillRowData) {
 
 export function BillRow({ bill, onMarkPaid, onEdit, onDelete, customCategoryColors }: BillRowProps) {
   const chip = statusChip(bill);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [pending, setPending] = useState<null | "paid" | "delete">(null);
   const alreadyPaidThisMonth = paidThisMonth(bill);
   const hasActions = Boolean((!alreadyPaidThisMonth && onMarkPaid) || onEdit || onDelete);
@@ -102,7 +104,6 @@ export function BillRow({ bill, onMarkPaid, onEdit, onDelete, customCategoryColo
       await onMarkPaid(bill.id);
     } finally {
       setPending(null);
-      setMenuOpen(false);
     }
   }
 
@@ -113,7 +114,6 @@ export function BillRow({ bill, onMarkPaid, onEdit, onDelete, customCategoryColo
       await onDelete(bill.id);
     } finally {
       setPending(null);
-      setMenuOpen(false);
     }
   }
 
@@ -160,75 +160,30 @@ export function BillRow({ bill, onMarkPaid, onEdit, onDelete, customCategoryColo
 
       {/* Menu (edit/delete/paid) */}
       {hasActions && (
-        <div className="flex-none relative ml-0.5">
-          <button
-            type="button"
-            aria-label="Bill actions"
+        <div className="flex-none ml-0.5">
+          <DropdownMenu
             disabled={pending !== null}
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="w-6 h-6 flex items-center justify-center rounded-[6px] hover:bg-ink/5 active:scale-95 disabled:opacity-40"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="#111008">
-              <circle cx="5" cy="12" r="1.8" />
-              <circle cx="12" cy="12" r="1.8" />
-              <circle cx="19" cy="12" r="1.8" />
-            </svg>
-          </button>
-
-          {menuOpen && (
-            <>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setMenuOpen(false)}
-                className="fixed inset-0 z-20 cursor-default"
-              />
-              <div className="absolute right-0 top-7 z-30 flex flex-col min-w-[130px] border-2 border-ink rounded-[10px] shadow-neo-sm bg-base overflow-hidden">
-                {!alreadyPaidThisMonth && onMarkPaid && (
-                  <button
-                    type="button"
-                    onClick={handlePaid}
-                    disabled={pending !== null}
-                    className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-income hover:bg-income/10 text-left disabled:opacity-40"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-income border border-ink" />
-                    Mark paid
-                  </button>
-                )}
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onEdit(bill.id);
-                    }}
-                    className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-ink hover:bg-ink/5 text-left border-t border-ink/20"
-                  >
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-                    </svg>
-                    Edit
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={pending !== null}
-                    className="font-body flex items-center gap-2 px-3 py-2 text-[12px] font-[600] text-alert hover:bg-alert/10 border-t border-ink/20 text-left disabled:opacity-40"
-                  >
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                    </svg>
-                    Delete
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+            aria-label="Bill actions"
+            items={[
+              ...(!alreadyPaidThisMonth && onMarkPaid ? [{
+                label: "Mark paid",
+                icon: <span className="w-2 h-2 rounded-full bg-income border border-ink" />,
+                onClick: () => void handlePaid(),
+                variant: "success" as const,
+              }] : []),
+              ...(onEdit ? [{
+                label: "Edit",
+                icon: <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111008" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>,
+                onClick: () => onEdit(bill.id),
+              }] : []),
+              ...(onDelete ? [{
+                label: "Delete",
+                icon: <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c81e1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /></svg>,
+                onClick: () => void handleDelete(),
+                variant: "danger" as const,
+              }] : []),
+            ]}
+          />
         </div>
       )}
     </div>

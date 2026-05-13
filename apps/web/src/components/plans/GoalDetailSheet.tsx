@@ -13,6 +13,7 @@ import { trpcQuery, trpcMutate } from "@/lib/api";
 import { formatLocalDateKey, dateKeyToUtcDatetimeISO } from "@/lib/dates";
 import { GoalStatusChip } from "./GoalStatusChip";
 import { NumPad } from "@/components/NumPad";
+import { DropdownMenu } from "@/components/DropdownMenu";
 
 /* ── Types ── */
 
@@ -86,7 +87,6 @@ function MonthlyTab({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [addYear, setAddYear] = useState(new Date().getFullYear());
   const [addMonth, setAddMonth] = useState(new Date().getMonth() + 1);
   const [addAmount, setAddAmount] = useState("");
@@ -291,51 +291,22 @@ function MonthlyTab({
               )}
 
               {/* 3-dot menu — always visible */}
-              <div className="relative flex-none">
-                <button
-                  type="button"
-                  aria-label="Actions"
-                  onClick={() => setMenuOpenId(menuOpenId === m.id ? null : m.id)}
+              <div className="flex-none">
+                <DropdownMenu
                   disabled={loadingId === m.id}
-                  className="w-6 h-6 flex items-center justify-center rounded-[6px] hover:bg-ink/5 active:scale-95 cursor-pointer disabled:opacity-30"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="#111008">
-                    <circle cx="5" cy="12" r="1.8" />
-                    <circle cx="12" cy="12" r="1.8" />
-                    <circle cx="19" cy="12" r="1.8" />
-                  </svg>
-                </button>
-                {menuOpenId === m.id && (
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Close menu"
-                      onClick={() => setMenuOpenId(null)}
-                      className="fixed inset-0 z-20 cursor-default"
-                    />
-                    <div className="absolute right-0 top-7 z-30 min-w-[130px] border-2 border-ink rounded-[10px] bg-base shadow-neo-sm overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(m.id);
-                          setEditAmount(String(m.amount));
-                          setMenuOpenId(null);
-                        }}
-                        className="w-full text-left px-3 py-2 font-body text-[12px] font-[600] text-ink hover:bg-[#f5f5f0] cursor-pointer"
-                      >
-                        Edit amount
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(m.id)}
-                        disabled={loadingId === m.id}
-                        className="w-full text-left px-3 py-2 font-body text-[12px] font-[600] text-alert hover:bg-alert/5 disabled:opacity-40 cursor-pointer"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
+                  aria-label="Milestone actions"
+                  items={[
+                    {
+                      label: "Edit amount",
+                      onClick: () => { setEditingId(m.id); setEditAmount(String(m.amount)); },
+                    },
+                    {
+                      label: "Delete",
+                      onClick: () => handleDelete(m.id),
+                      variant: "danger",
+                    },
+                  ]}
+                />
               </div>
             </div>
           ))}
