@@ -1,6 +1,0 @@
-{
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @jinsight/web build",
-  "outputDirectory": "apps/web/.next",
-  "framework": "nextjs"
-}
